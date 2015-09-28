@@ -10,6 +10,7 @@
 #include <unistd.h>
 
 #define BAUDRATE B38400
+#define MODEMDEVICE "/dev/ttyS1"
 #define _POSIX_SOURCE 1 /* POSIX compliant source */
 #define FALSE 0
 #define TRUE 1
@@ -20,12 +21,13 @@ int main(int argc, char** argv)
 {
     int fd,c, res;
     struct termios oldtio,newtio;
-    char buf[255] = "";
-    char cat[255] = "";
-
+    char buf[255];
+    int i, sum = 0, speed = 0;
+    
     if ( (argc < 2) || 
   	     ((strcmp("/dev/ttyS0", argv[1])!=0) && 
-  	      (strcmp("/dev/ttyS1", argv[1])!=0) )) {
+  	      (strcmp("/dev/ttyS1", argv[1])!=0) &&
+		  (strcmp("/dev/ttyS4", argv[1])!=0))) {
       printf("Usage:\tnserial SerialPort\n\tex: nserial /dev/ttyS1\n");
       exit(1);
     }
@@ -35,8 +37,8 @@ int main(int argc, char** argv)
     Open serial port device for reading and writing and not as controlling tty
     because we don't want to get killed if linenoise sends CTRL-C.
   */
-  
-    
+
+
     fd = open(argv[1], O_RDWR | O_NOCTTY );
     if (fd <0) {perror(argv[1]); exit(-1); }
 
@@ -73,25 +75,35 @@ int main(int argc, char** argv)
     }
 
     printf("New termios structure set\n");
-    int it = -1;
-    while (STOP==FALSE) {     
-      res = read(fd,cat,1);
-      strcat(buf,cat);
-      it++;
-      if (buf[it] == '\0') STOP=TRUE;
-    }
-
-    printf("Message received: %s\n", buf);
 
 
+	printf("Message to be sent: ");
+    gets(buf);
+	buf[(unsigned)strlen(buf)] = '\0';
+    
+    /*testing*/
+    buf[25] = '\n';
+    
+    res = write(fd,buf,255);   
+    printf("%d bytes written\n", res);
+ 
 
   /* 
-    O ciclo WHILE deve ser alterado de modo a respeitar o indicado no guião 
+    O ciclo FOR e as instruções seguintes devem ser alterados de modo a respeitar 
+    o indicado no guião 
   */
 
 
 
-    tcsetattr(fd,TCSANOW,&oldtio);
+   
+    if ( tcsetattr(fd,TCSANOW,&oldtio) == -1) {
+      perror("tcsetattr");
+      exit(-1);
+    }
+
+
+
+
     close(fd);
     return 0;
 }
