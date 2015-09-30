@@ -18,14 +18,15 @@ volatile int STOP=FALSE;
 
 int main(int argc, char** argv)
 {
-    int fd,c, res;
+    int fd;
     struct termios oldtio,newtio;
     char buf[255] = "";
     char cat[255] = "";
 
     if ( (argc < 2) || 
   	     ((strcmp("/dev/ttyS0", argv[1])!=0) && 
-  	      (strcmp("/dev/ttyS1", argv[1])!=0) )) {
+  	      (strcmp("/dev/ttyS1", argv[1])!=0)  && 
+  	      (strcmp("/dev/ttyS4", argv[1])!=0) )) {
       printf("Usage:\tnserial SerialPort\n\tex: nserial /dev/ttyS1\n");
       exit(1);
     }
@@ -75,7 +76,7 @@ int main(int argc, char** argv)
     printf("New termios structure set\n");
     int it = -1;
     while (STOP==FALSE) {     
-      res = read(fd,cat,1);
+      read(fd,cat,1);
       strcat(buf,cat);
       it++;
       if (buf[it] == '\0') STOP=TRUE;
