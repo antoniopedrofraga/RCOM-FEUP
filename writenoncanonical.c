@@ -16,7 +16,51 @@
 #define FALSE 0
 #define TRUE 1
 
-volatile int STOP=FALSE;
+#define FLAG 0x7e
+#define A 0x03
+#define C 0x03
+
+volatile int STOP = FALSE;
+int flag = 1;
+
+void setAndWrite(int *fd)
+{
+	tcflush(*fd, TCOFLUSH);
+	unsigned char SET[5];
+	unsigned char BCC;
+	SET[0] = FLAG;
+	SET[1] = A;
+	SET[2] = C;
+	BCC = SET[1] ^ SET[2];
+	SET[3] = BCC;
+	SET[4] = FLAG;
+	write(*fd, SET, 5);
+}
+
+void getResponse(int *fd)
+{
+	char buf[5];
+	char tmp[5];
+	int res;
+	tcflush(*fd, TCIFLUSH);
+	int i = 0;
+	while(STOP == FALSE)
+	{
+		res = read(*fd, buf, 1);
+		if (res != 0) {
+			tmp[i] = buf[0];
+			if (tmp[i] == FLAG && i!= 0) {
+				STOP = TRUE;
+			}
+			i++;
+		}
+		
+	}
+
+	if (tmp[3] != (tmp[1]^tmp[2])) {
+		printf("Error\n");
+	}
+}
 
 int main(int argc, char** argv)
 {
@@ -38,7 +82,6 @@ int main(int argc, char** argv)
     because we don't want to get killed if linenoise sends CTRL-C.
   */
 
-
     fd = open(argv[1], O_RDWR | O_NOCTTY );
     if (fd <0) {perror(argv[1]); exit(-1); }
 
@@ -56,16 +99,12 @@ int main(int argc, char** argv)
     newtio.c_lflag = 0;
 
     newtio.c_cc[VTIME]    = 0;   /* inter-character timer unused */
-    newtio.c_cc[VMIN]     = 5;   /* blocking read until 5 chars received */
-
-
+    newtio.c_cc[VMIN]     = 1;   /* blocking read until 1 chars received */
 
   /* 
     VTIME e VMIN devem ser alterados de forma a proteger com um temporizador a 
     leitura do(s) próximo(s) caracter(es)
   */
-
-
 
     tcflush(fd, TCIOFLUSH);
 
@@ -77,28 +116,24 @@ int main(int argc, char** argv)
     printf("New termios structure set\n");
 
 
-	printf("Message to be sent: ");
-    gets(buf);
-	buf[(unsigned)strlen(buf)] = '\0';
+	//printf("Message to be sent: ");
+    //gets(buf);
+	//buf[(unsigned)strlen(buf)] = '\0';
     
-    res = write(fd,buf,255);   
-    printf("%d bytes written\n", res);
- 
+    //res = write(fd,buf,strlen(buf) + 1); 
+	setAndWrite(&fd); 
+    //printf("%d bytes written\n", res);
+ 	sleep(3);
 
   /* 
     O ciclo FOR e as instruções seguintes devem ser alterados de modo a respeitar 
     o indicado no guião 
   */
-
-
-
    
     if ( tcsetattr(fd,TCSANOW,&oldtio) == -1) {
       perror("tcsetattr");
       exit(-1);
     }
-
-
 
 
     close(fd);
