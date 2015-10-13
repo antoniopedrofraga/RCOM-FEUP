@@ -99,7 +99,7 @@ int main(int argc, char** argv)
     newtio.c_lflag = 0;
 
     newtio.c_cc[VTIME]    = 0;   /* inter-character timer unused */
-    newtio.c_cc[VMIN]     = 1;   /* blocking read until 1 chars received */
+    newtio.c_cc[VMIN]     = 1;   /* blocking read until 1 char received */
 
   /* 
     VTIME e VMIN devem ser alterados de forma a proteger com um temporizador a 
@@ -116,13 +116,7 @@ int main(int argc, char** argv)
     printf("New termios structure set\n");
 
 
-	//printf("Message to be sent: ");
-    //gets(buf);
-	//buf[(unsigned)strlen(buf)] = '\0';
-    
-    //res = write(fd,buf,strlen(buf) + 1); 
 	setAndWrite(&fd); 
-    //printf("%d bytes written\n", res);
  	sleep(3);
 
   /* 

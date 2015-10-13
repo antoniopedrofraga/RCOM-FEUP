@@ -13,13 +13,10 @@
 #define _POSIX_SOURCE 1 /* POSIX compliant source */
 #define FALSE 0
 #define TRUE 1
-#define F 0x7e
+
+#define FLAG 0x7e
 #define A 0x03
 #define C 0x07
-#define UALENGT 5
-
-
-
 
 volatile int STOP=FALSE;
 
@@ -28,8 +25,8 @@ int main(int argc, char** argv)
     int fd,c, res;
     struct termios oldtio,newtio;
     char buf[1];
-	char temp[UALENGT];
-	unsigned char UA[UALENGT]; 
+	char tmp[5];
+	unsigned char UA[5]; 
 
     if ( (argc < 2) || 
   	     ((strcmp("/dev/ttyS0", argv[1])!=0) && 
@@ -57,7 +54,7 @@ int main(int argc, char** argv)
     newtio.c_lflag = 0;
 
     newtio.c_cc[VTIME]    = 0;   /* inter-character timer unused */
-    newtio.c_cc[VMIN]     = 1;   /* blocking read until 1 chars received */
+    newtio.c_cc[VMIN]     = 1;   /* blocking read until 1 char received */
 
     tcflush(fd, TCIFLUSH);
     tcsetattr(fd,TCSANOW,&newtio);
@@ -65,35 +62,31 @@ int main(int argc, char** argv)
     printf("New termios structure set\n");
 
 	int i = 0;
-    while (STOP==FALSE) {       /* loop for input */
-      res = read(fd,buf,1);   /* returns after 1 chars have been input */
-		temp[i] = buf[0];
-		if(temp[i] == F && i!=0)
+    while (STOP==FALSE) {
+      	res = read(fd, buf, 1);
+		tmp[i] = buf[0];
+		if(tmp[i] == FLAG && i!=0)
 			STOP = TRUE;	
 		else
 			i++;
     }
 
-
-
-	UA[0] = F;
+	UA[0] = FLAG;
 	UA[1] = A;
 	UA[2] = C;
 	UA[3] = A^C;
 	UA[4] = F;
 
-
-	if(temp[3] != (temp[1]^temp[2]))
-		{
-			printf("Error recieving msg!");
+	if(tmp[3] != (tmp[1]^tmp[2])) {
+			printf("Error!");
 			exit(1);
 		}
 
-		printf("%x, %x, %x, %x, %x\n", temp[0], temp[1], temp[2],temp[3],temp[4]);	
+	//printf("%x, %x, %x, %x, %x\n", temp[0], temp[1], temp[2],temp[3],temp[4]);	
 
 	tcflush(fd, TCOFLUSH);
 	sleep(1);
-	res = write(fd, UA, UALENGT);
+	res = write(fd, UA, 5);
 	sleep(1);
 
     tcsetattr(fd,TCSANOW,&oldtio);
