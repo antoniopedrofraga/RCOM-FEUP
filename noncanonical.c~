@@ -30,7 +30,8 @@ int main(int argc, char** argv)
 
     if ( (argc < 2) || 
   	     ((strcmp("/dev/ttyS0", argv[1])!=0) && 
-  	      (strcmp("/dev/ttyS1", argv[1])!=0) )) {
+  	      (strcmp("/dev/ttyS1", argv[1])!=0) && 
+		(strcmp("/dev/ttyS3", argv[1])!=0))) {
       printf("Usage:\tnserial SerialPort\n\tex: nserial /dev/ttyS1\n");
       exit(1);
     }
@@ -75,7 +76,7 @@ int main(int argc, char** argv)
 	UA[1] = A;
 	UA[2] = C;
 	UA[3] = A^C;
-	UA[4] = F;
+	UA[4] = FLAG;
 
 	if(tmp[3] != (tmp[1]^tmp[2])) {
 			printf("Error!");
