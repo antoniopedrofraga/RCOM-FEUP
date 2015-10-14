@@ -17,8 +17,67 @@
 #define FLAG 0x7e
 #define A 0x03
 #define C 0x07
+#define Cr 0x07
+#define Cs 0x03
 
 volatile int STOP=FALSE;
+
+int stateMachine(unsigned char c, int state,char temp[])
+{
+		switch(state){
+			case 0:
+				if(c == FLAG)
+				{
+					temp[state] = c;
+					state++;
+				}
+				break;
+			case 1: 
+				if(c == A)
+				{
+					temp[state] = c;
+					state++;
+				}
+				else if(c == FLAG)
+						state = 1;
+					else
+						state = 0;
+				break;
+			case 2: 
+				if(c == Cs)
+				{
+					temp[state] = c;
+					state++;
+				}
+				else if(c == FLAG)
+						state = 1;
+					else
+						state = 0;
+				break;
+			case 3:
+				if(c == (temp[1]^temp[2]))
+				{
+					temp[state] = c;
+					state++;
+				}
+				else if(c == FLAG)
+						state = 1;
+					else
+						state = 0;
+				break;
+			case 4:
+				if(c == FLAG)
+				{
+					temp[state] = c;
+					STOP = TRUE;
+				}
+				else
+					state = 0;
+				break;
+		}
+	return state;	
+}
+
 
 int main(int argc, char** argv)
 {
@@ -63,9 +122,11 @@ int main(int argc, char** argv)
     printf("New termios structure set\n");
 
 	int i = 0;
+	int state = 0;
     while (STOP==FALSE) {
       	res = read(fd, buf, 1);
 		tmp[i] = buf[0];
+		state = stateMachine(buf[0],state,tmp);
 		if(tmp[i] == FLAG && i!=0)
 			STOP = TRUE;	
 		else
@@ -81,9 +142,9 @@ int main(int argc, char** argv)
 	if(tmp[3] != (tmp[1]^tmp[2])) {
 			printf("Error!");
 			exit(1);
-		}
-
-	//printf("%x, %x, %x, %x, %x\n", temp[0], temp[1], temp[2],temp[3],temp[4]);	
+	}else{
+		printf("It's ok, %x, %x, %x, %x, %x\n", tmp[0], tmp[1], tmp[2],tmp[3],tmp[4]);
+	}	
 
 	tcflush(fd, TCOFLUSH);
 	sleep(1);
