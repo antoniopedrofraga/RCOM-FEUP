@@ -75,7 +75,7 @@ int main(int argc, char** argv)
 	UA[1] = A;
 	UA[2] = C;
 	UA[3] = A^C;
-	UA[4] = F;
+	UA[4] = FLAG;
 
 	if(tmp[3] != (tmp[1]^tmp[2])) {
 			printf("Error!");

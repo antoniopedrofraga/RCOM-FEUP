@@ -9,6 +9,7 @@
 #include <string.h>
 #include <strings.h>
 #include <unistd.h>
+#include <signal.h>
 
 #define BAUDRATE B38400
 #define MODEMDEVICE "/dev/ttyS1"
@@ -21,7 +22,14 @@
 #define C 0x03
 
 volatile int STOP = FALSE;
-int flag = 1;
+int flag = 1, counter = 0;
+
+void incrementCounter()
+{
+	counter++;
+	flag = 1;
+	printf("Timeout!\n");
+}
 
 void setAndWrite(int *fd)
 {
@@ -37,14 +45,15 @@ void setAndWrite(int *fd)
 	write(*fd, SET, 5);
 }
 
-void getResponse(int *fd)
+int getResponse(int *fd)
 {
 	char buf[5];
 	char tmp[5];
 	int res;
 	tcflush(*fd, TCIFLUSH);
 	int i = 0;
-	while(STOP == FALSE)
+
+	while(STOP == FALSE && !flag)
 	{
 		res = read(*fd, buf, 1);
 		if (res != 0) {
@@ -57,9 +66,15 @@ void getResponse(int *fd)
 		
 	}
 
+	if (flag)
+		return -1;
+
 	if (tmp[3] != (tmp[1]^tmp[2])) {
 		printf("Error\n");
+		return 1;
 	}
+
+	return 0;
 }
 
 int main(int argc, char** argv)
@@ -82,7 +97,7 @@ int main(int argc, char** argv)
     because we don't want to get killed if linenoise sends CTRL-C.
   */
 
-    fd = open(argv[1], O_RDWR | O_NOCTTY );
+    fd = open(argv[1], O_RDWR | O_NOCTTY);
     if (fd <0) {perror(argv[1]); exit(-1); }
 
     if ( tcgetattr(fd,&oldtio) == -1) { /* save current port settings */
@@ -115,9 +130,20 @@ int main(int argc, char** argv)
 
     printf("New termios structure set\n");
 
-
-	setAndWrite(&fd); 
- 	sleep(3);
+	(void) signal(SIGALRM, incrementCounter);
+	while(counter < 3) {
+		if (flag) {
+			alarm(3);
+			printf("Sending message\n");
+			flag = 0;
+			setAndWrite(&fd);
+			if (getResponse(&fd) == 0) {
+				printf("Success!\n");
+				break;
+			}
+		}
+	}
+ 	
 
   /* 
     O ciclo FOR e as instruções seguintes devem ser alterados de modo a respeitar 
