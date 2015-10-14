@@ -24,6 +24,64 @@
 volatile int STOP = FALSE;
 int flag = 1, counter = 0;
 
+
+int stateMachine(unsigned char c, int state,char temp[])
+{
+		printf("State number = %d\n", state);
+		switch(state){
+			case 0:
+				if(c == FLAG)
+				{
+					temp[state] = c;
+					state++;
+				}
+				break;
+			case 1: 
+				if(c == A)
+				{
+					temp[state] = c;
+					state++;
+				}
+				else if(c == FLAG)
+						state = 1;
+					else
+						state = 0;
+				break;
+			case 2: 
+				if(c == C)
+				{
+					temp[state] = c;
+					state++;
+				}
+				else if(c == FLAG)
+						state = 1;
+					else
+						state = 0;
+				break;
+			case 3:
+				if(c == (temp[1]^temp[2]))
+				{
+					temp[state] = c;
+					state++;
+				}
+				else if(c == FLAG)
+						state = 1;
+					else
+						state = 0;
+				break;
+			case 4:
+				if(c == FLAG)
+				{
+					temp[state] = c;
+					STOP = TRUE;
+				}
+				else
+					state = 0;
+				break;
+		}
+	return state;	
+}
+
 void incrementCounter()
 {
 	counter++;
@@ -52,17 +110,13 @@ int getResponse(int *fd)
 	int res;
 	tcflush(*fd, TCIFLUSH);
 	int i = 0;
-
+	int state = 0;
+	
 	while(STOP == FALSE && !flag)
 	{
 		res = read(*fd, buf, 1);
 		if (res > 0) {
-			tmp[i] = buf[0];
-			if (tmp[i] == FLAG && i!= 0) {
-				STOP = TRUE;
-			}
-			else
-				i++;
+			state = stateMachine(buf[0],state,tmp);
 		}
 		
 	}
