@@ -56,18 +56,19 @@ int getResponse(int *fd)
 	while(STOP == FALSE && !flag)
 	{
 		res = read(*fd, buf, 1);
-		if (res != 0) {
+		if (res > 0) {
 			tmp[i] = buf[0];
 			if (tmp[i] == FLAG && i!= 0) {
 				STOP = TRUE;
 			}
-			i++;
+			else
+				i++;
 		}
 		
 	}
-
+	
 	if (flag)
-		return -1;
+		return 1;
 
 	if (tmp[3] != (tmp[1]^tmp[2])) {
 		printf("Error\n");
@@ -97,7 +98,7 @@ int main(int argc, char** argv)
     because we don't want to get killed if linenoise sends CTRL-C.
   */
 
-    fd = open(argv[1], O_RDWR | O_NOCTTY);
+    fd = open(argv[1], O_RDWR | O_NOCTTY | O_NONBLOCK);
     if (fd <0) {perror(argv[1]); exit(-1); }
 
     if ( tcgetattr(fd,&oldtio) == -1) { /* save current port settings */
@@ -135,8 +136,8 @@ int main(int argc, char** argv)
 		if (flag) {
 			alarm(3);
 			printf("Sending message\n");
-			flag = 0;
 			setAndWrite(&fd);
+			flag = 0;
 			if (getResponse(&fd) == 0) {
 				printf("Success!\n");
 				break;
