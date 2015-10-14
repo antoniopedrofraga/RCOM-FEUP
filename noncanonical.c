@@ -16,9 +16,7 @@
 
 #define FLAG 0x7e
 #define A 0x03
-#define C 0x07
-#define Cr 0x07
-#define Cs 0x03
+#define C 0x03
 
 volatile int STOP=FALSE;
 
@@ -44,7 +42,7 @@ int stateMachine(unsigned char c, int state,char temp[])
 						state = 0;
 				break;
 			case 2: 
-				if(c == Cs)
+				if(c == C)
 				{
 					temp[state] = c;
 					state++;
@@ -124,13 +122,9 @@ int main(int argc, char** argv)
 	int i = 0;
 	int state = 0;
     while (STOP==FALSE) {
-      	res = read(fd, buf, 1);
-		tmp[i] = buf[0];
-		state = stateMachine(buf[0],state,tmp);
-		if(tmp[i] == FLAG && i!=0)
-			STOP = TRUE;	
-		else
-			i++;
+      		res = read(fd, buf, 1);
+		if (res > 0)
+			state = stateMachine(buf[0],state,tmp);
     }
 
 	UA[0] = FLAG;
