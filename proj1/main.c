@@ -211,7 +211,7 @@ int getResponse(int *fd)
 
 
 int llopen(int mode, int*fd){
-    int res, counter, flag;
+    int res;
     char buf[1];
     char tmp[5];
     int i = 0;
