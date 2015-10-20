@@ -17,6 +17,9 @@
 #define FALSE 0
 #define TRUE 1
 
+#define RECEIVER 0
+#define WRITER 1
+
 #define FLAG 0x7e
 #define A 0x03
 #define C 0x03
@@ -89,6 +92,7 @@ void incrementCounter()
 	printf("Timeout!\n");
 }
 
+
 void setAndWrite(int *fd)
 {
 	tcflush(*fd, TCOFLUSH);
@@ -138,20 +142,27 @@ int main(int argc, char** argv)
     struct termios oldtio,newtio;
     char buf[255];
     
-    if ( (argc < 2) || 
+    if ( (argc != 3) || 
   	     ((strcmp("/dev/ttyS0", argv[1])!=0) && 
   	      (strcmp("/dev/ttyS1", argv[1])!=0) &&
-		  (strcmp("/dev/ttyS4", argv[1])!=0))) {
-      printf("Usage:\tnserial SerialPort\n\tex: nserial /dev/ttyS1\n");
+		  (strcmp("/dev/ttyS4", argv[1])!=0)) ||
+		((strcmp("RECEIVER", argv[2]) != 0)
+		&& (strcmp("WRITER", argv[2]) != 0))) {
+      printf("Usage:\tnserial SerialPort flag\n\tex: nserial /dev/ttyS1 WRITER/RECEIVER\n");
       exit(1);
     }
-
+    
+    int mode;
+    if((strcmp("RECEIVER", argv[2]) == 0)){
+	mode = RECEIVER;
+    }else{
+	mode = WRITER;
+    }
 
   /*
     Open serial port device for reading and writing and not as controlling tty
     because we don't want to get killed if linenoise sends CTRL-C.
   */
-
     fd = open(argv[1], O_RDWR | O_NOCTTY | O_NONBLOCK);
     if (fd <0) {perror(argv[1]); exit(-1); }
 
@@ -186,6 +197,7 @@ int main(int argc, char** argv)
     printf("New termios structure set\n");
 
 	(void) signal(SIGALRM, incrementCounter);
+
 	while(counter < 3) {
 		if (flag) {
 			alarm(3);

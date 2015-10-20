@@ -82,7 +82,7 @@ int main(int argc, char** argv)
     int fd,c, res;
     struct termios oldtio,newtio;
     char buf[1];
-	char tmp[5];
+    char tmp[5];
 	unsigned char UA[5]; 
 
     if ( (argc < 2) || 
