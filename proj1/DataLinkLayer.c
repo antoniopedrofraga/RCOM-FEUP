@@ -117,6 +117,45 @@ int llopen(int mode) {
 	return 0;
 }
 
+
+int llclose(int mode){
+	int counter = 0;
+
+	switch(mode){
+		case TRANSMITTER:
+			setAlarm();
+
+			while(counter < ll->numRetries) {
+				if (counter == 0 || alarmFired) {
+					alarmFired = 0;
+					sendCommand(al->fd, DISC);
+					counter++;
+					if (receiveCommand(al->fd) == 0)
+						break;
+				}
+			}
+
+			stopAlarm();
+			if (counter < ll->numRetries)
+				printf("Connection successfully disconected!\n");
+			else {
+				printf("ERROR in llopen(): could not disconect\n");
+				return ERROR;
+			}
+			break;
+		case RECEIVER:
+			if (receiveCommand(al->fd) == 0) {
+				sendCommand(al->fd, DISC);
+				printf("Connection successfully disconected!\n");
+			}
+			break;
+		default:
+			break;
+	}
+
+	return 0;
+}
+
 int sendCommand(int fd, Command cmd) {
 	unsigned char command[COMMAND_SIZE];
 
@@ -131,6 +170,10 @@ int sendCommand(int fd, Command cmd) {
 			break;
 		case UA:
 			command[2] = C_UA;
+			command[3] = command[1] ^ command[2];
+			break;
+		case DISC:
+			command[2] = C_DISC;
 			command[3] = command[1] ^ command[2];
 			break;
 		default:

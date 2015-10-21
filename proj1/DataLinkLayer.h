@@ -40,6 +40,8 @@ int setNewTermios();
 
 int llopen(int mode);
 
+int llclose(int mode);
+
 int sendCommand(int fd, Command cmd);
 
 int receiveCommand(int fd);

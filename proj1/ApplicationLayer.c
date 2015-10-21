@@ -31,6 +31,8 @@ int initAppLayer(char* port, int status) {
 	}
 	llopen(al->status);
 
+	llclose(al->status);
+
 	closeSerialPort();
 
 	return 0;
