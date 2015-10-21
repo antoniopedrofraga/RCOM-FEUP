@@ -75,6 +75,7 @@ int setNewTermios() {
     	printf("ERROR in setNewTermios(): could not set new termios\n");
     	return ERROR;
     }
+    return 0;
 }
 
 int llopen(int mode) {

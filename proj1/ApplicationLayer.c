@@ -20,7 +20,7 @@ int initAppLayer(char* port, int status) {
 
 	al->fd = openSerialPort(port);
 	if(al->fd < 0) {
-		printf("ERROR IN initAppLayer(): could not open serial port\n");
+		printf("ERROR in initAppLayer(): could not open serial port\n");
 		return ERROR;
 	}
 	al->status = status;
@@ -29,6 +29,7 @@ int initAppLayer(char* port, int status) {
 		printf("ERROR in initAppLayer(): could not initialize link layer\n");
 		return ERROR;
 	}
+	llopen(al->status);
 
 	closeSerialPort();
 
