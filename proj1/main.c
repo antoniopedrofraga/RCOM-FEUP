@@ -9,26 +9,19 @@
 #include <unistd.h>
 #include <signal.h>
 
-#define RECEIVER 0
-#define WRITER 1
+#include "Utilities.h"
+#include "ApplicationLayer.h"
 
-#define ERROR -1
-
-#define BAUDRATE B38400
 #define MODEMDEVICE "/dev/ttyS1"
 #define _POSIX_SOURCE 1 /* POSIX compliant source */
 #define FALSE 0
 #define TRUE 1
 
-#define FLAG 0x7e
-#define A 0x03
-#define C 0x03
-
 volatile int STOP=FALSE;
 
 int flag = 1, counter = 0;
 
-int stateMachine(unsigned char c, int state,char temp[])
+/*int stateMachine(unsigned char c, int state,char temp[])
 {
 		switch(state){
 			case 0:
@@ -82,7 +75,7 @@ int stateMachine(unsigned char c, int state,char temp[])
 				break;
 		}
 	return state;	
-}
+}*/
 
 
 int main(int argc, char** argv)
@@ -96,8 +89,8 @@ int main(int argc, char** argv)
   	      (strcmp("/dev/ttyS1", argv[1])!=0) &&
 		  (strcmp("/dev/ttyS4", argv[1])!=0)) ||
 		((strcmp("RECEIVER", argv[2]) != 0)
-		&& (strcmp("WRITER", argv[2]) != 0))) {
-      printf("Usage:\tnserial SerialPort flag\n\tex: nserial /dev/ttyS1 WRITER/RECEIVER\n");
+		&& (strcmp("TRANSMITTER", argv[2]) != 0))) {
+      printf("Usage:\tnserial SerialPort flag\n\tex: nserial /dev/ttyS1 TRANSMITTER/RECEIVER\n");
       exit(1);
     }
     
@@ -105,30 +98,21 @@ int main(int argc, char** argv)
     if((strcmp("RECEIVER", argv[2]) == 0)){
 	mode = RECEIVER;
     }else{
-	mode = WRITER;
+	mode = TRANSMITTER;
     }
 
-    fd = openSerialPort(argv[1], &oldtio, &newtio);
-    if(fd < 0){
-	printf("Error opening serial port");
-	exit(ERROR);
-	}
-    
-    llopen(mode, &fd);
-
-    tcsetattr(fd,TCSANOW,&oldtio);
-    close(fd);
+    initAppLayer(argv[1], mode);
     return 0;
 }
 
 
 
-int openSerialPort(char*serialPort, struct termios*oldtio, struct termios*newtio){
+/*int openSerialPort(char*serialPort, struct termios*oldtio, struct termios*newtio){
 
     int fd = open(serialPort, O_RDWR | O_NOCTTY | O_NONBLOCK);
     if (fd < 0) {perror(serialPort); return ERROR; }
 
-    if ( tcgetattr(fd,oldtio) == ERROR) { /* save current port settings */
+    if ( tcgetattr(fd,oldtio) == ERROR) { // save current port settings
       perror("tcgetattr");
       return ERROR;
     }
@@ -263,5 +247,5 @@ int llopen(int mode, int*fd){
 	return ERROR;
     }
 	
-}
+}*/
 
