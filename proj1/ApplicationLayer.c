@@ -29,7 +29,8 @@ int initAppLayer(char* port, int status) {
 		printf("ERROR in initAppLayer(): could not initialize link layer\n");
 		return ERROR;
 	}
-	llopen(al->status);
+	
+	if(llopen(al->status) == ERROR) return ERROR;
 
 	llclose(al->status);
 

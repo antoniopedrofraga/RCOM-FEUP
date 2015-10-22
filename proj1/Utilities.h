@@ -6,4 +6,4 @@
 #define BAUDRATE B38400
 #define ERROR -1
 
-#define COMMAND_SIZE 5
+#define FRAME_SIZE 5

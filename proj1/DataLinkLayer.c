@@ -31,7 +31,7 @@ int initLinkLayer(char* port, int baudRate, unsigned int timeout, unsigned int n
 }
 
 int openSerialPort(char* port) {
-	return open(port, O_RDWR | O_NOCTTY | O_NONBLOCK);
+	return open(port, O_RDWR | O_NOCTTY);
 }
 
 int closeSerialPort() {
@@ -83,17 +83,20 @@ int llopen(int mode) {
 
 	switch(mode){
 		case TRANSMITTER:
-			setAlarm();
-
 			while(counter < ll->numRetries) {
 				if (counter == 0 || alarmFired) {
 					alarmFired = 0;
 					printf("Sending message...\n");
-					sendCommand(al->fd, SET);
+					sendFrame(al->fd, SET);
 					counter++;
-					if (receiveCommand(al->fd) == 0)
-						break;
+
+					if(counter != 0)	
+						setAlarm();
 				}
+
+				if (receiveFrame(al->fd) == 0)
+					break;
+
 			}
 
 			stopAlarm();
@@ -105,8 +108,8 @@ int llopen(int mode) {
 			}
 			break;
 		case RECEIVER:
-			if (receiveCommand(al->fd) == 0) {
-				sendCommand(al->fd, UA);
+			if (receiveFrame(al->fd) == 0) {
+				sendFrame(al->fd, UA);
 				printf("Connection successfully established!\n");
 			}
 			break;
@@ -128,10 +131,12 @@ int llclose(int mode){
 			while(counter < ll->numRetries) {
 				if (counter == 0 || alarmFired) {
 					alarmFired = 0;
-					sendCommand(al->fd, DISC);
+					sendFrame(al->fd, DISC);
 					counter++;
-					if (receiveCommand(al->fd) == 0)
+					if (receiveFrame(al->fd) == 0){
+						sendFrame(al->fd, UA);
 						break;
+					}
 				}
 			}
 
@@ -139,14 +144,29 @@ int llclose(int mode){
 			if (counter < ll->numRetries)
 				printf("Connection successfully disconected!\n");
 			else {
-				printf("ERROR in llopen(): could not disconect\n");
+				printf("ERROR in llclose(): could not disconect\n");
 				return ERROR;
 			}
 			break;
 		case RECEIVER:
-			if (receiveCommand(al->fd) == 0) {
-				sendCommand(al->fd, DISC);
-				printf("Connection successfully disconected!\n");
+			if (receiveFrame(al->fd) == 0) {
+
+				setAlarm();
+
+				while(counter < ll->numRetries) {
+					if (counter == 0 || alarmFired) {
+						alarmFired = 0;
+						counter++;
+						sendFrame(al->fd, DISC);
+						if(receiveFrame(al->fd) == 0) {
+							printf("Connection successfully disconected!\n");
+							break;
+						}
+					}
+				}
+
+				stopAlarm();
+
 			}
 			break;
 		default:
@@ -156,52 +176,81 @@ int llclose(int mode){
 	return 0;
 }
 
-int sendCommand(int fd, Command cmd) {
-	unsigned char command[COMMAND_SIZE];
+int sendFrame(int fd, Frame frm) {
+	unsigned char frame[FRAME_SIZE];
 
-	command[0] = FLAG;
-	command[1] = A;
-	command[4] = FLAG;
+	frame[0] = FLAG;
+	frame[4] = FLAG;
 
-	switch(cmd) {
+	switch(frm) {
 		case SET:
-			command[2] = C_SET;
-			command[3] = command[1] ^ command[2];
+			frame[1] = getAFromCmd();
+			frame[2] = C_SET;
+			frame[3] = frame[1] ^ frame[2];
 			break;
 		case UA:
-			command[2] = C_UA;
-			command[3] = command[1] ^ command[2];
+			frame[1] = getAFromRspn();
+			frame[2] = C_UA;
+			frame[3] = frame[1] ^ frame[2];
 			break;
 		case DISC:
-			command[2] = C_DISC;
-			command[3] = command[1] ^ command[2];
+			frame[1] = getAFromCmd();
+			frame[2] = C_DISC;
+			frame[3] = frame[1] ^ frame[2];
 			break;
 		default:
-			printf("ERROR in sendCommand(): unexpected command\n");
+			printf("ERROR in sendFrame(): unexpected frame\n");
 			break;
 	}
 
-	if (write(fd, command, COMMAND_SIZE) != COMMAND_SIZE) {
-		printf("ERROR in sendCommand(): could not send\n");
+	if(frame[1] == 0) {
+		printf("ERROR in sendFrame(): unnexpected status\n");
+		return ERROR;
+	}
+
+	if (write(fd, frame, FRAME_SIZE) != FRAME_SIZE) {
+		printf("ERROR in sendFrame(): could not send\n");
 		return ERROR;
 	}
 
 	return 0;
 }
 
-int receiveCommand(int fd) {
+unsigned char getAFromCmd() {
+	switch(al->status){
+		case TRANSMITTER:
+			return A03;
+		case RECEIVER:
+			return A01;
+	}
+	return 0;
+}
+
+unsigned char getAFromRspn() {
+	switch(al->status){
+		case TRANSMITTER:
+			return A01;
+		case RECEIVER:
+			return A03;
+	}
+	return 0;
+}
+
+int receiveFrame(int fd) {
 	unsigned char c;
 	char tmp[5];
 	int res;
 	int state = 0;
 
-	tcflush(fd, TCIFLUSH);
-	
 	while(state < 5)
 	{
 		res = read(fd, &c, 1);
+
 		if (res > 0)
 			state = stateMachine(c, state, tmp);
+		else
+			return ERROR;
+
 	}
 
 	return 0;
@@ -216,8 +265,8 @@ int stateMachine(unsigned char c, int state, char cmd[])
 				state++;
 			}
 			break;
-		case 1: 
-			if (c == A) {
+		case 1:
+			if (c == A01 || c == A03) {
 				cmd[state] = c;
 				state++;
 			}

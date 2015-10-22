@@ -11,12 +11,13 @@
 #define C_DISC 0x0B
 
 #define FLAG 0x7E
-#define A 0x03
+#define A03 0x03
+#define A01 0x01
 #define ESCAPE 0x7D
 
 typedef enum {
 	SET, UA, RR, REJ, DISC
-} Command;
+} Frame;
 
 typedef struct {
 	char port[20];
@@ -42,8 +43,12 @@ int llopen(int mode);
 
 int llclose(int mode);
 
-int sendCommand(int fd, Command cmd);
+int sendFrame(int fd, Frame frame);
 
-int receiveCommand(int fd);
+unsigned char getAFromCmd();
+
+unsigned char getAFromRspn();
+
+int receiveFrame(int fd);
 
 int stateMachine(unsigned char c, int state, char cmd[]);
