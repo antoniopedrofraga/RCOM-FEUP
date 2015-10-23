@@ -78,20 +78,18 @@ int setNewTermios() {
     return 0;
 }
 
-int llopen(int mode) {
+int llopen() {
 	int counter = 0;
 
-	switch(mode){
+	switch(al->status){
 		case TRANSMITTER:
 			while(counter < ll->numRetries) {
 				if (counter == 0 || alarmFired) {
 					alarmFired = 0;
-					printf("Sending message...\n");
 					sendFrame(al->fd, SET);
 					counter++;
 
-					if(counter != 0)	
-						setAlarm();
+					setAlarm();
 				}
 
 				if (receiveFrame(al->fd) == 0)
@@ -121,18 +119,17 @@ int llopen(int mode) {
 }
 
 
-int llclose(int mode){
+int llclose() {
 	int counter = 0;
 
-	switch(mode){
+	switch(al->status){
 		case TRANSMITTER:
-			setAlarm();
-
 			while(counter < ll->numRetries) {
 				if (counter == 0 || alarmFired) {
 					alarmFired = 0;
 					sendFrame(al->fd, DISC);
 					counter++;
+					setAlarm();
 					if (receiveFrame(al->fd) == 0){
 						sendFrame(al->fd, UA);
 						break;
@@ -150,13 +147,11 @@ int llclose(int mode){
 			break;
 		case RECEIVER:
 			if (receiveFrame(al->fd) == 0) {
-
-				setAlarm();
-
 				while(counter < ll->numRetries) {
 					if (counter == 0 || alarmFired) {
 						alarmFired = 0;
 						counter++;
+						setAlarm();
 						sendFrame(al->fd, DISC);
 						if(receiveFrame(al->fd) == 0) {
 							printf("Connection successfully disconected!\n");
@@ -171,6 +166,39 @@ int llclose(int mode){
 			break;
 		default:
 			break;
+	}
+
+	return 0;
+}
+
+unsigned char getBCC2(unsigned char* data, unsigned int size) {
+	unsigned char BCC;
+
+	int i;
+	for (i = 0; i < size; i++)
+		BCC ^= data[i];
+
+	return BCC;
+}
+
+int sendDataFrame(int fd, unsigned char* data, unsigned int size) {
+	DataFrame df;
+
+	df.size =  size + DATA_FRAME_SIZE;
+
+	df.frame[0] = FLAG;
+	df.frame[1] = A03;
+	df.frame[2] = ll->sequenceNumber << 5;
+	df.frame[3] = df.frame[1] ^ df.frame[2];
+	memcpy(&df.frame[4], data, size);
+	df.frame[4 + size] = getBCC2(data, size);
+	df.frame[5 + size] = FLAG;
+
+	df = stuff(df);
+
+	if (write(fd, df.frame, df.size) != df.size) {
+		printf("ERROR in sendDataFrame(): could not send frame\n");
+		return ERROR;
 	}
 
 	return 0;
@@ -209,7 +237,7 @@ int sendFrame(int fd, Frame frm) {
 	}
 
 	if (write(fd, frame, FRAME_SIZE) != FRAME_SIZE) {
-		printf("ERROR in sendFrame(): could not send\n");
+		printf("ERROR in sendFrame(): could not send frame\n");
 		return ERROR;
 	}
 
@@ -254,6 +282,54 @@ int receiveFrame(int fd) {
 	}
 
 	return 0;
+}
+
+DataFrame stuff(DataFrame df) {
+	DataFrame stuffedFrame;
+	unsigned int newSize = df.size;
+
+	int i;
+	for (i = 1; i < df.size - 1; i++) {
+		if (df.frame[i] == FLAG || df.frame[i] == ESCAPE)
+			newSize++;
+	}
+
+	stuffedFrame.size = newSize;
+	stuffedFrame.frame[0] = df.frame[0];
+
+	int j = 1;
+	for (i = 1; i < df.size - 1; i++) {
+		if (df.frame[i] == FLAG || df.frame[i] == ESCAPE) {
+			stuffedFrame.frame[j] = ESCAPE;
+			stuffedFrame.frame[++j] = df.frame[i] ^ 0x20;
+		}
+		else
+			stuffedFrame.frame[j] = df.frame[i];
+		j++;
+	}
+
+	stuffedFrame.frame[j] = df.frame[i];
+
+	return stuffedFrame;
+
+}
+
+DataFrame destuff(DataFrame df) {
+	DataFrame destuffedFrame;
+	int j = 0;
+
+	int i;
+	for (i = 0; i < df.size; i++) {
+		if (df.frame[i] == ESCAPE)
+			destuffedFrame.frame[j] = df.frame[++i] ^ 0x20;
+		else
+			destuffedFrame.frame[j] = df.frame[i];
+		j++;
+	}
+
+	destuffedFrame.size = j;
+
+	return destuffedFrame;
 }
 
 int stateMachine(unsigned char c, int state, char cmd[])

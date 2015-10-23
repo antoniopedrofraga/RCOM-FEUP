@@ -30,9 +30,9 @@ int initAppLayer(char* port, int status) {
 		return ERROR;
 	}
 	
-	if(llopen(al->status) == ERROR) return ERROR;
+	if(llopen() == ERROR) return ERROR;
 
-	llclose(al->status);
+	llclose();
 
 	closeSerialPort();
 

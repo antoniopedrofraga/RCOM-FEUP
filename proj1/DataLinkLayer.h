@@ -25,9 +25,14 @@ typedef struct {
 	unsigned int sequenceNumber;
 	unsigned int timeout;
 	unsigned int numRetries;
-	char frame[MAX_SIZE];
+	char frame[MAX_FRAME_SIZE];
 	struct termios oldtio, newtio;
 } LinkLayer;
+
+typedef struct {
+	char frame[MAX_FRAME_SIZE];
+	unsigned int size;
+} DataFrame;
 
 extern LinkLayer* ll;
 
@@ -39,9 +44,13 @@ int closeSerialPort();
 
 int setNewTermios();
 
-int llopen(int mode);
+int llopen();
 
-int llclose(int mode);
+int llclose();
+
+unsigned char getBCC2(unsigned char* data, unsigned int size);
+
+int sendDataFrame(int fd, unsigned char* data, unsigned int size);
 
 int sendFrame(int fd, Frame frame);
 
@@ -50,5 +59,9 @@ unsigned char getAFromCmd();
 unsigned char getAFromRspn();
 
 int receiveFrame(int fd);
+
+DataFrame stuff(DataFrame df);
+
+DataFrame destuff(DataFrame df);
 
 int stateMachine(unsigned char c, int state, char cmd[]);

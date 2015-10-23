@@ -12,7 +12,7 @@ void handler(int signal) {
 
 	alarmFired = 1;
 
-	printf("Timeout!\n");
+	printf("Timeout! Retrying...\n");
 }
 
 void setAlarm() {
