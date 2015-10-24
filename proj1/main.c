@@ -6,18 +6,18 @@
 #include "Utilities.h"
 #include "ApplicationLayer.h"
 
+
 int main(int argc, char** argv)
 {
     
-	if ( (argc != 3) || 
-		((strcmp("/dev/ttyS0", argv[1])!=0) && 
+	if ( argc != 4 || ((strcmp("/dev/ttyS0", argv[1])!=0) && 
 			(strcmp("/dev/ttyS1", argv[1])!=0) &&
 			(strcmp("/dev/ttyS4", argv[1])!=0)) ||
 		((strcmp("RECEIVER", argv[2]) != 0)
 			&& (strcmp("TRANSMITTER", argv[2]) != 0))) {
-		printf("Usage:\tnserial SerialPort flag\n\tex: nserial /dev/ttyS1 TRANSMITTER/RECEIVER\n");
-	exit(ERROR);
-}
+			printf("\nERROR! Program it's called with 4 arguments\n\nUsage:\t<nserial> <SerialPort> <flag> <filePath>\n\tex: nserial /dev/ttyS1 TRANSMITTER/RECEIVER penguim.gif\n");
+		exit(ERROR);
+	}
     
     int mode;
     if((strcmp("RECEIVER", argv[2]) == 0)){
@@ -25,7 +25,7 @@ int main(int argc, char** argv)
     }else{
 	mode = TRANSMITTER;
     }
-
-    initAppLayer(argv[1], mode);
+    initAppLayer(argv[1], mode, argv[3]);
     return 0;
 }
+

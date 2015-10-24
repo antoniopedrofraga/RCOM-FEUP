@@ -156,7 +156,8 @@ int llclose() {
 						if(receiveFrame(al->fd) == 0) {
 							printf("Connection successfully disconected!\n");
 							break;
-						}
+						}else
+							printf("erro a receber frame\n");
 					}
 				}
 
