@@ -92,8 +92,10 @@ int llopen() {
 					setAlarm();
 				}
 
-				if (receiveFrame(al->fd) == 0)
+				if (receiveFrame(al->fd) == 0) {
+					counter--;
 					break;
+				}
 
 			}
 
@@ -205,13 +207,13 @@ int sendDataFrame(int fd, unsigned char* data, unsigned int size) {
 	return 0;
 }
 
-int sendFrame(int fd, Frame frm) {
+int sendFrame(int fd, Command cmd) {
 	unsigned char frame[FRAME_SIZE];
 
 	frame[0] = FLAG;
 	frame[4] = FLAG;
 
-	switch(frm) {
+	switch(cmd) {
 		case SET:
 			frame[1] = getAFromCmd();
 			frame[2] = C_SET;
@@ -267,19 +269,92 @@ unsigned char getAFromRspn() {
 
 int receiveFrame(int fd) {
 	unsigned char c;
-	char tmp[5];
-	int res;
-	int state = 0;
+	int res, receiving = 1, state = 0, dataFrame = 0, i = 0;
+	DataFrame df;
 
-	while(state < 5)
-	{
+	while(receiving) {
 		res = read(fd, &c, 1);
-
-		if (res > 0)
-			state = stateMachine(c, state, tmp);
-		else
+		
+		if (res < 1)
 			return ERROR;
 
+		switch(state) {
+		case 0:
+			if (c == FLAG) {
+				df.frame[i] = c;
+				i++;
+				state++;
+			}
+			break;
+		case 1:
+			if (c == A01 || c == A03) {
+				df.frame[i] = c;
+				i++;
+				state++;
+			}
+			else if (c == FLAG)
+				state = 1;
+			else
+				state = 0;
+			break;
+		case 2: 
+			if (c != FLAG) {
+				df.frame[i] = c;
+				i++;
+				state++;
+			}
+			else if (c == FLAG)
+				state = 1;
+			else
+				state = 0;
+			break;
+		case 3:
+			if (c == (ll->frame[1]^ll->frame[2])) {
+				df.frame[i] = c;
+				i++;
+				state++;
+			}
+			else if (c == FLAG)
+				state = 1;
+			else
+				state = 0;
+			break;
+		case 4:
+			if (c == FLAG) {
+				df.frame[i] = c;
+				state++;
+
+				if (i > 4)
+					dataFrame = 1;
+			}
+			else {
+				df.frame[i] = c;
+				i++;
+			}
+			break;
+		case 5:
+			receiving = 0;
+			break;
+		default:
+			break;
+		}
+	}
+
+	if (dataFrame) {
+		df.size = i;
+		df = destuff(df);
+		
+		// check BCC1
+		if (df.frame[3] != (df.frame[1] ^ df.frame[2]))
+			df.status = REJ;
+		
+		// check BCC2
+		int dataSize = df.size - DATA_FRAME_SIZE;
+		unsigned char BCC2 = getBCC2(&(df.frame[4]), dataSize);
+		if (df.frame[4 + dataSize] != BCC2)
+			df.status = REJ;
+		
+			
 	}
 
 	return 0;
@@ -331,58 +406,4 @@ DataFrame destuff(DataFrame df) {
 	destuffedFrame.size = j;
 
 	return destuffedFrame;
-}
-
-int stateMachine(unsigned char c, int state, char cmd[])
-{
-	switch(state) {
-		case 0:
-			if (c == FLAG) {
-				cmd[state] = c;
-				state++;
-			}
-			break;
-		case 1:
-			if (c == A01 || c == A03) {
-				cmd[state] = c;
-				state++;
-			}
-			else if (c == FLAG)
-				state = 1;
-			else
-				state = 0;
-			break;
-		case 2: 
-			if (c != FLAG) {
-				cmd[state] = c;
-				state++;
-			}
-			else if (c == FLAG)
-				state = 1;
-			else
-				state = 0;
-			break;
-		case 3:
-			if (c == (cmd[1]^cmd[2])) {
-				cmd[state] = c;
-				state++;
-			}
-			else if (c == FLAG)
-				state = 1;
-			else
-				state = 0;
-			break;
-		case 4:
-			if (c == FLAG) {
-				cmd[state] = c;
-				state++;
-			}
-			else
-				state = 0;
-			break;
-		default:
-			break;
-	}
-
-	return state;	
 }

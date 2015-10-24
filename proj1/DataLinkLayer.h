@@ -17,7 +17,7 @@
 
 typedef enum {
 	SET, UA, RR, REJ, DISC
-} Frame;
+} Command;
 
 typedef struct {
 	char port[20];
@@ -30,8 +30,9 @@ typedef struct {
 } LinkLayer;
 
 typedef struct {
-	char frame[MAX_FRAME_SIZE];
+	unsigned char frame[MAX_FRAME_SIZE];
 	unsigned int size;
+	Command status;
 } DataFrame;
 
 extern LinkLayer* ll;
@@ -52,7 +53,7 @@ unsigned char getBCC2(unsigned char* data, unsigned int size);
 
 int sendDataFrame(int fd, unsigned char* data, unsigned int size);
 
-int sendFrame(int fd, Frame frame);
+int sendFrame(int fd, Command cmd);
 
 unsigned char getAFromCmd();
 
@@ -63,5 +64,3 @@ int receiveFrame(int fd);
 DataFrame stuff(DataFrame df);
 
 DataFrame destuff(DataFrame df);
-
-int stateMachine(unsigned char c, int state, char cmd[]);
