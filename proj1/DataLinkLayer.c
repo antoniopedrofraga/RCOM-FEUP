@@ -20,7 +20,7 @@ int initLinkLayer(char* port, int baudRate, unsigned int timeout, unsigned int n
 
 	strcpy(ll->port, port);
 	ll->baudRate = baudRate;
-	ll->sequenceNumber = 0;
+	ll->sn = 0;
 	ll->timeout = timeout;
 	ll->numRetries = numRetries;
 
@@ -86,17 +86,16 @@ int llopen() {
 			while(counter < ll->numRetries) {
 				if (counter == 0 || alarmFired) {
 					alarmFired = 0;
-					sendFrame(al->fd, SET);
+					sendCommand(al->fd, SET);
 					counter++;
 
 					setAlarm();
 				}
 
-				if (receiveFrame(al->fd) == 0) {
+				if (isCommand(receiveFrame(al->fd), UA)) {
 					counter--;
 					break;
 				}
-
 			}
 
 			stopAlarm();
@@ -108,8 +107,8 @@ int llopen() {
 			}
 			break;
 		case RECEIVER:
-			if (receiveFrame(al->fd) == 0) {
-				sendFrame(al->fd, UA);
+			if (isCommand(receiveFrame(al->fd), SET)) {
+				sendCommand(al->fd, UA);
 				printf("Connection successfully established!\n");
 			}
 			break;
@@ -120,20 +119,24 @@ int llopen() {
 	return 0;
 }
 
+int llwrite() {
+	return 0;
+}
 
 int llclose() {
 	int counter = 0;
 
-	switch(al->status){
+	switch(al->status) {
 		case TRANSMITTER:
 			while(counter < ll->numRetries) {
 				if (counter == 0 || alarmFired) {
 					alarmFired = 0;
-					sendFrame(al->fd, DISC);
+					sendCommand(al->fd, DISC);
 					counter++;
 					setAlarm();
-					if (receiveFrame(al->fd) == 0){
-						sendFrame(al->fd, UA);
+					if (isCommand(receiveFrame(al->fd), DISC)) {
+						sendCommand(al->fd, UA);
+						sleep(1);
 						break;
 					}
 				}
@@ -148,18 +151,21 @@ int llclose() {
 			}
 			break;
 		case RECEIVER:
-			if (receiveFrame(al->fd) == 0) {
+			if (isCommand(receiveFrame(al->fd), DISC)) {
 				while(counter < ll->numRetries) {
 					if (counter == 0 || alarmFired) {
 						alarmFired = 0;
 						counter++;
 						setAlarm();
-						sendFrame(al->fd, DISC);
-						if(receiveFrame(al->fd) == 0) {
+						sendCommand(al->fd, DISC);
+						if (isCommand(receiveFrame(al->fd), UA)) {
 							printf("Connection successfully disconected!\n");
 							break;
-						}else
-							printf("erro a receber frame\n");
+						}
+						else {
+							printf("ERROR in llclose(): could not disconect\n");
+							return ERROR;
+						}
 					}
 				}
 
@@ -169,6 +175,43 @@ int llclose() {
 			break;
 		default:
 			break;
+	}
+
+	return 0;
+}
+
+int isCommand(Frame frm, Command cmd) {
+	if (frm.type == INVALID)
+		return 0;
+
+	switch (frm.frame[2] & 0x0F) {
+	case C_SET:
+		if (cmd == SET)
+			return 1;
+		else
+			return 0;
+	case C_UA:
+		if (cmd == UA)
+			return 1;
+		else
+			return 0;
+	case C_RR:
+		if (cmd == RR)
+			return 1;
+		else
+			return 0;
+	case C_REJ:
+		if (cmd == REJ)
+			return 1;
+		else
+			return 0;
+	case C_DISC:
+		if (cmd == DISC)
+			return 1;
+		else
+			return 0;
+	default:
+		return 0;
 	}
 
 	return 0;
@@ -185,13 +228,13 @@ unsigned char getBCC2(unsigned char* data, unsigned int size) {
 }
 
 int sendDataFrame(int fd, unsigned char* data, unsigned int size) {
-	DataFrame df;
+	Frame df;
 
 	df.size =  size + DATA_FRAME_SIZE;
 
 	df.frame[0] = FLAG;
 	df.frame[1] = A03;
-	df.frame[2] = ll->sequenceNumber << 5;
+	df.frame[2] = ll->sn << 5;
 	df.frame[3] = df.frame[1] ^ df.frame[2];
 	memcpy(&df.frame[4], data, size);
 	df.frame[4 + size] = getBCC2(data, size);
@@ -200,14 +243,14 @@ int sendDataFrame(int fd, unsigned char* data, unsigned int size) {
 	df = stuff(df);
 
 	if (write(fd, df.frame, df.size) != df.size) {
-		printf("ERROR in sendDataFrame(): could not send frame\n");
+		printf("ERROR in sendFrame(): could not send frame\n");
 		return ERROR;
 	}
 
 	return 0;
 }
 
-int sendFrame(int fd, Command cmd) {
+int sendCommand(int fd, Command cmd) {
 	unsigned char frame[FRAME_SIZE];
 
 	frame[0] = FLAG;
@@ -267,73 +310,79 @@ unsigned char getAFromRspn() {
 	return 0;
 }
 
-int receiveFrame(int fd) {
+Frame receiveFrame(int fd) {
 	unsigned char c;
 	int res, receiving = 1, state = 0, dataFrame = 0, i = 0;
-	DataFrame df;
+	Frame frm;
+	frm.type = INVALID;
 
 	while(receiving) {
 		res = read(fd, &c, 1);
 		
 		if (res < 1)
-			return ERROR;
+			return frm;
 
 		switch(state) {
 		case 0:
 			if (c == FLAG) {
-				df.frame[i] = c;
+				frm.frame[i] = c;
 				i++;
 				state++;
 			}
 			break;
 		case 1:
 			if (c == A01 || c == A03) {
-				df.frame[i] = c;
+				frm.frame[i] = c;
 				i++;
 				state++;
 			}
-			else if (c == FLAG)
-				state = 1;
-			else
+			else if (c != FLAG) {
 				state = 0;
+				i = 0;
+			}
 			break;
 		case 2: 
 			if (c != FLAG) {
-				df.frame[i] = c;
+				frm.frame[i] = c;
 				i++;
 				state++;
 			}
-			else if (c == FLAG)
+			else if (c == FLAG) {
 				state = 1;
-			else
+				i = 1;
+			}
+			else {
 				state = 0;
+				i = 0;
+			}
 			break;
 		case 3:
-			if (c == (ll->frame[1]^ll->frame[2])) {
-				df.frame[i] = c;
+			if (c == (frm.frame[1]^frm.frame[2])) {
+				frm.frame[i] = c;
 				i++;
 				state++;
 			}
-			else if (c == FLAG)
+			else if (c == FLAG) {
 				state = 1;
-			else
+				i = 1;
+			}
+			else {
 				state = 0;
+				i = 0;
+			}
 			break;
 		case 4:
 			if (c == FLAG) {
-				df.frame[i] = c;
-				state++;
+				frm.frame[i] = c;
+				receiving = 0;
 
 				if (i > 4)
 					dataFrame = 1;
 			}
 			else {
-				df.frame[i] = c;
+				frm.frame[i] = c;
 				i++;
 			}
-			break;
-		case 5:
-			receiving = 0;
 			break;
 		default:
 			break;
@@ -341,27 +390,34 @@ int receiveFrame(int fd) {
 	}
 
 	if (dataFrame) {
-		df.size = i;
-		df = destuff(df);
+		frm.size = i;
+		frm.answer = NONE;
+		frm.type = DATA;
+		frm = destuff(frm);
 		
 		// check BCC1
-		if (df.frame[3] != (df.frame[1] ^ df.frame[2]))
-			df.status = REJ;
+		if (frm.frame[3] != (frm.frame[1] ^ frm.frame[2]))
+			frm.answer = REJ;
 		
 		// check BCC2
-		int dataSize = df.size - DATA_FRAME_SIZE;
-		unsigned char BCC2 = getBCC2(&(df.frame[4]), dataSize);
-		if (df.frame[4 + dataSize] != BCC2)
-			df.status = REJ;
-		
-			
-	}
+		int dataSize = frm.size - DATA_FRAME_SIZE;
+		unsigned char BCC2 = getBCC2(&(frm.frame[4]), dataSize);
+		if (frm.frame[4 + dataSize] != BCC2)
+			frm.answer = REJ;
 
-	return 0;
+		if (frm.answer == NONE)
+			frm.answer = RR;
+
+		frm.sn = (frm.frame[2] >> 6) & BIT(0);
+	}
+	else
+		frm.type = COMMAND;
+
+	return frm;
 }
 
-DataFrame stuff(DataFrame df) {
-	DataFrame stuffedFrame;
+Frame stuff(Frame df) {
+	Frame stuffedFrame;
 	unsigned int newSize = df.size;
 
 	int i;
@@ -390,8 +446,8 @@ DataFrame stuff(DataFrame df) {
 
 }
 
-DataFrame destuff(DataFrame df) {
-	DataFrame destuffedFrame;
+Frame destuff(Frame df) {
+	Frame destuffedFrame;
 	int j = 0;
 
 	int i;

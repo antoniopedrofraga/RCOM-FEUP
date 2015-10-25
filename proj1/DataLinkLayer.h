@@ -16,13 +16,17 @@
 #define ESCAPE 0x7D
 
 typedef enum {
-	SET, UA, RR, REJ, DISC
+	SET, UA, RR, REJ, DISC, NONE
 } Command;
+
+typedef enum {
+	INVALID, DATA, COMMAND
+} FrameType;
 
 typedef struct {
 	char port[20];
 	int baudRate;
-	unsigned int sequenceNumber;
+	unsigned int sn;
 	unsigned int timeout;
 	unsigned int numRetries;
 	char frame[MAX_FRAME_SIZE];
@@ -32,8 +36,10 @@ typedef struct {
 typedef struct {
 	unsigned char frame[MAX_FRAME_SIZE];
 	unsigned int size;
-	Command status;
-} DataFrame;
+	unsigned int sn;
+	FrameType type;
+	Command answer;
+} Frame;
 
 extern LinkLayer* ll;
 
@@ -53,14 +59,16 @@ unsigned char getBCC2(unsigned char* data, unsigned int size);
 
 int sendDataFrame(int fd, unsigned char* data, unsigned int size);
 
-int sendFrame(int fd, Command cmd);
+int sendCommand(int fd, Command cmd);
+
+int isCommand(Frame frm, Command cmd);
 
 unsigned char getAFromCmd();
 
 unsigned char getAFromRspn();
 
-int receiveFrame(int fd);
+Frame receiveFrame(int fd);
 
-DataFrame stuff(DataFrame df);
+Frame stuff(Frame df);
 
-DataFrame destuff(DataFrame df);
+Frame destuff(Frame df);

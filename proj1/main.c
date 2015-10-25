@@ -10,7 +10,7 @@
 int main(int argc, char** argv)
 {
     
-	if ( argc != 4 || ((strcmp("/dev/ttyS0", argv[1])!=0) && 
+	if ( argc != 3 || ((strcmp("/dev/ttyS0", argv[1])!=0) && 
 			(strcmp("/dev/ttyS1", argv[1])!=0) &&
 			(strcmp("/dev/ttyS4", argv[1])!=0)) ||
 		((strcmp("RECEIVER", argv[2]) != 0)
@@ -25,7 +25,9 @@ int main(int argc, char** argv)
     }else{
 	mode = TRANSMITTER;
     }
-    initAppLayer(argv[1], mode, argv[3]);
+
+    char tmp[20];
+    initAppLayer(argv[1], mode, tmp);
     return 0;
 }
 
