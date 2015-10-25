@@ -55,6 +55,10 @@ int llopen();
 
 int llclose();
 
+int llwrite(unsigned char * buf, int bufSize);
+
+int llread(unsigned char ** message);
+
 unsigned char getBCC2(unsigned char* data, unsigned int size);
 
 int sendDataFrame(int fd, unsigned char* data, unsigned int size);

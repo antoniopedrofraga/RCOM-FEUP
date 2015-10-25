@@ -10,7 +10,7 @@
 int main(int argc, char** argv)
 {
     
-	if ( argc != 3 || ((strcmp("/dev/ttyS0", argv[1])!=0) && 
+	if ( argc != 4 || ((strcmp("/dev/ttyS0", argv[1])!=0) && 
 			(strcmp("/dev/ttyS1", argv[1])!=0) &&
 			(strcmp("/dev/ttyS4", argv[1])!=0)) ||
 		((strcmp("RECEIVER", argv[2]) != 0)
@@ -21,9 +21,9 @@ int main(int argc, char** argv)
     
     int mode;
     if((strcmp("RECEIVER", argv[2]) == 0)){
-	mode = RECEIVER;
+    	mode = RECEIVER;
     }else{
-	mode = TRANSMITTER;
+    	mode = TRANSMITTER;
     }
 
     char tmp[20];

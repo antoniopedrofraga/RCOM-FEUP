@@ -119,7 +119,69 @@ int llopen() {
 	return 0;
 }
 
-int llwrite() {
+int llwrite(unsigned char* buf, int bufSize) {
+	int counter = 0;
+	Frame receivedFrame;
+
+	while(counter < ll->numRetries) {
+		if (counter == 0 || alarmFired) {
+			alarmFired = 0;
+			sendDataFrame(al->fd, buf, bufSize);
+			counter++;
+
+			setAlarm();
+		}
+
+		receivedFrame = receiveFrame(al->fd);
+
+		if (isCommand(receivedFrame, RR)) {
+			if(ll->sn != receivedFrame.sn) ll->sn = receivedFrame.sn;
+
+			stopAlarm();
+			counter--;
+			break;
+
+		} else if (isCommand(receivedFrame, REJ)) {
+			counter = 0;
+			stopAlarm();
+		}
+
+	}
+
+	if (counter >= ll->numRetries) {
+		printf("ERROR in llopen(): could not establish a connection\n");
+		stopAlarm();
+		return ERROR;
+	}
+
+	return 0;
+}
+
+int llread(unsigned char ** message) {
+	int disc = 0;
+	Frame frm;
+
+	while (!disc) {
+		frm = receiveFrame(al->fd);
+
+		switch (frm.type) {
+			case COMMAND:
+				if (isCommand(frm, DISC))
+					disc = 1;
+
+				break;
+			case DATA:
+				if (frm.answer == RR && ll->sn == frm.sn) 
+					ll->sn = !ll->sn;
+
+				sendCommand(al->fd, frm.answer);
+				break;
+			default:
+				return ERROR;
+		}
+
+	}
+
 	return 0;
 }
 
@@ -270,6 +332,18 @@ int sendCommand(int fd, Command cmd) {
 		case DISC:
 			frame[1] = getAFromCmd();
 			frame[2] = C_DISC;
+			frame[3] = frame[1] ^ frame[2];
+			break;
+		case RR:
+			frame[1] = getAFromRspn();
+			frame[2] = C_RR;
+			frame[2] |= (ll->sn << 5);
+			frame[3] = frame[1] ^ frame[2];
+			break;
+		case REJ:
+			frame[1] = getAFromRspn();
+			frame[2] = C_REJ;
+			frame[2] |= (ll->sn << 5);
 			frame[3] = frame[1] ^ frame[2];
 			break;
 		default:

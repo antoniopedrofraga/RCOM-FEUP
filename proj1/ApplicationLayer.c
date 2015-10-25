@@ -38,8 +38,8 @@ int initAppLayer(char* port, int status, char * filePath) {
 	
 	if(llopen() == ERROR) return ERROR;
 
-	/*if(al->status == TRANSMITTER) sendData();
-	else if(al->status == RECEIVER) ;*/
+	if(al->status == TRANSMITTER) ;
+	else if(al->status == RECEIVER) ;
 
 	llclose();
 
@@ -62,8 +62,8 @@ FILE * openFile(char * filePath) {
 	
 	struct stat st; 
 
-    	if (stat(filePath, &st) == 0)
-        	al->fileSize = st.st_size;
+	if (stat(filePath, &st) == 0)
+		al->fileSize = st.st_size;
 	else {
 		printf("ERROR in openFile(): error getting file size\n");
 		return NULL;
@@ -73,6 +73,9 @@ FILE * openFile(char * filePath) {
 }
 
 int sendData() {
+
+	//if(sendControlPackage(START, ) < 0) return ERROR;
+
 	return 0;
 }
 
