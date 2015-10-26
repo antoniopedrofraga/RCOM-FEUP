@@ -79,7 +79,15 @@ int sendData(char * filePath) {
 	if (sendCtrlPkg(CTRL_PKG_START, filePath) < 0)
 		return ERROR;
 
-	printf("Sent control package.\n");
+	int bytesRead = 0, i = 0;
+	char * buffer;
+
+	while((bytesRead = fread(buffer, sizeof(char), MAX_BUF_SIZE, file)) > 0){
+		if(sendDataPkg(buffer, bytesRead, &i) < 0)
+			return ERROR;
+		i++;
+	}
+
 
 	llclose();
 	return 0;
@@ -92,7 +100,15 @@ int receiveData(char * filePath) {
 	if(rcvCtrlPkg(CTRL_PKG_START, &fileSize, &filePath) < 0)
 		return ERROR;
 
-	printf("Received control package.\nFile size = %d bytes/ File Name  = %s\n", fileSize, filePath);
+	int bytesRead, bytesAcumulator = 0;
+	unsigned char ** info;
+	while(bytesAcumulator < fileSize){
+		bytesRead = rcvDataPkg(info);
+		if(bytesRead < 0) {
+			return ERROR;
+		}
+		bytesAcumulator += bytesRead;
+	}
 
 	llclose();
 
@@ -113,12 +129,10 @@ int sendCtrlPkg(int ctrlField, char * filePath) {
 	ctrlPckg[1] = PARAM_SIZE + '0';
 	ctrlPckg[2] = strlen(sizeString) + '0';
 
-	//printf("paramSize = %c, %c, %c\n", ctrlPckg[0], ctrlPckg[1], ctrlPckg[2]);
 
 	int i, acumulator = 3;
 	for(i = 0; i < strlen(sizeString); i++) {
 		ctrlPckg[acumulator] = sizeString[i];
-		//printf("%c\n", ctrlPckg[acumulator]);
 		acumulator++;;
 	}
 
@@ -127,18 +141,13 @@ int sendCtrlPkg(int ctrlField, char * filePath) {
 	ctrlPckg[acumulator] = strlen(filePath) + '0';
 	acumulator++;
 
-	//printf("Param name = %c, %c\n\nName string:\n", ctrlPckg[acumulator - 2], ctrlPckg[acumulator - 1]);
-
-	//printf("File Path Size= %d\n", (int) strlen(filePath));
-
 	for(i = 0; i < strlen(filePath); i++) {
 		ctrlPckg[acumulator] = filePath[i];
-		//printf("%c\n", ctrlPckg[acumulator]);
 		acumulator++;;
 	}
 
 	if (llwrite(ctrlPckg, size) < 0) {
-		printf("ERROR in sendCtrlPckg(): \n");
+		printf("ERROR in sendCtrlPkg(): llwrite() function error!\n");
 		return ERROR;
 	}
 
@@ -151,17 +160,17 @@ int rcvCtrlPkg(int controlField, int * fileSize, char ** filePath) {
 	unsigned char * info;
 
 	if (llread(&info) < 0) {
-		printf("ERROR in rcvCtrlPckg(): \n");
+		printf("ERROR in rcvCtrlPkg(): \n");
 		return ERROR;
 	}
 	
 	if ((info[0] - '0') != controlField) {
-		printf("ERROR in rcvCtrlPckg(): unexpected control field!\n");
+		printf("ERROR in rcvCtrlPkg(): unexpected control field!\n");
 		return ERROR;
 	}
 
 	if ((info[1] - '0') != PARAM_SIZE) {
-		printf("ERROR in rcvCtrlPckg(): unexpected size param!\n");
+		printf("ERROR in rcvCtrlPkg(): unexpected size param!\n");
 		return ERROR;
 	}
 
@@ -179,7 +188,7 @@ int rcvCtrlPkg(int controlField, int * fileSize, char ** filePath) {
 	(*fileSize) = atoi(fileSizeStr);
 
 	if((info[acumulator] - '0') != PARAM_NAME) {
-		printf("ERROR in rcvCtrlPckg(): unexpected name param!\n");
+		printf("ERROR in rcvCtrlPkg(): unexpected name param!\n");
 		return ERROR;
 	}
 
@@ -199,4 +208,52 @@ int rcvCtrlPkg(int controlField, int * fileSize, char ** filePath) {
 	strcpy((*filePath), pathStr);
 
 	return 0;
+}
+
+
+int sendDataPkg(char * buffer, int bytesRead, int * i) {
+	int size = bytesRead + 4;
+	unsigned char dataPckg[size];
+
+	dataPckg[0] = CTRL_PKG_DATA + '0';
+	dataPckg[1] = (*i) + '0';
+	dataPckg[2] = (bytesRead / MAX_BUF_SIZE) + '0';
+	dataPckg[3] = (bytesRead % MAX_BUF_SIZE) + '0';
+
+	memcpy(&dataPckg[4], buffer, bytesRead);
+
+	if (llwrite(dataPckg, size) < 0) {
+		printf("ERROR in sendDataPkg(): llwrite() function error!\n");
+		return ERROR;
+	}
+
+	return 0;
+}
+
+int rcvDataPkg(unsigned char ** info, int * i) {
+	int bytes = 0;
+
+	if (llread(info) < 0) {
+		printf("ERROR in rcvDataPkg(): llread() function error!\n");
+		return ERROR;
+	}
+
+	int C = info[0] - '0';
+	int N = info[1] - '0';
+	int L2 = info[2] - '0';
+	int L1 = info[3] - '0';
+
+	if(C != CTRL_PKG_DATA - '0') {
+		printf("ERROR in rcvDataPkg(): control field it's different from CTRL_PKG_DATA!\n");
+		return ERROR;
+	}
+
+	if(N != ++i) {
+		printf("ERROR in rcvDataPkg(): sequence number it's wrong!\n");
+		return ERROR;
+	}
+
+	bytes = strlen(info) - 4;
+
+	return bytes;
 }

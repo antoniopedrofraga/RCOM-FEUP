@@ -13,7 +13,7 @@ typedef enum {
 	PARAM_SIZE = 0, PARAM_NAME = 1
 } CtrlPckgParam;
 
-int initAppLayer(char* port, int status, char * filePath);
+int initAppLayer(char * port, int status, char * filePath);
 
 FILE * openFile(char * filePath);
 
@@ -24,3 +24,5 @@ int receiveData(char * filePath);
 int sendCtrlPkg(int ctrlField, char * filePath);
 
 int rcvCtrlPkg(int controlField, int * fileSize, char ** filePath);
+
+int sendDataPkg(char * buffer, int bytesRead);
