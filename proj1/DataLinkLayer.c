@@ -297,7 +297,6 @@ unsigned char getBCC2(unsigned char* data, unsigned int size) {
 
 int sendDataFrame(int fd, unsigned char* data, unsigned int size) {
 	Frame df;
-
 	df.size =  size + DATA_FRAME_SIZE;
 
 	df.frame[0] = FLAG;
@@ -486,8 +485,8 @@ Frame receiveFrame(int fd) {
 		// check BCC2
 		int dataSize = frm.size - DATA_FRAME_SIZE;
 		unsigned char BCC2 = getBCC2(&frm.frame[4], dataSize);
-		printf("BCC2 = 0x%x, frame = 0x%x\n", BCC2, frm.frame[4 + dataSize]);
 		if (frm.frame[4 + dataSize] != BCC2) {
+			printf("BCC2 = 0x%x, frame = 0x%x\n", BCC2, frm.frame[4 + dataSize]);			
 			printf("ERROR in receiveFrame(): BCC2 error\n");
 			sleep(1);
 			frm.answer = REJ;

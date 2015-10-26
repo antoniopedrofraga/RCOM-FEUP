@@ -90,10 +90,14 @@ int sendData(char * filePath) {
 
 	printf("Control Package sent!\n");
 
-	int bytesRead = 0, i = 0;
+	/*int bytesRead = 0, i = 0;
 	char * buffer = malloc(MAX_BUF_SIZE * sizeof(char));
 
-	while((bytesRead = fread(buffer, sizeof(char), MAX_BUF_SIZE, al->file)) > 0){
+	bytesRead = fread(buffer, sizeof(char), MAX_BUF_SIZE, al->file);
+	printf("bytesRead begining = %d\n", bytesRead);
+	sendDataPkg(buffer, bytesRead, i);*/
+
+	/*while((bytesRead = fread(buffer, sizeof(char), MAX_BUF_SIZE, al->file)) > 0){
 		printf("bytesRead begining = %d\n", bytesRead);
 		if(sendDataPkg(buffer, bytesRead, i) < 0) {
 			printf("ERROR in sendData(): error sending data package!\n");
@@ -104,7 +108,7 @@ int sendData(char * filePath) {
 	}
 	printf("bytesRead end = %d\n", bytesRead);
 
-	/*if (fclose(al->file) < 0) {
+	if (fclose(al->file) < 0) {
 		printf("ERROR in sendData(): error closing file!\n");
 		return ERROR;
 	}
@@ -125,7 +129,7 @@ int receiveData(char * filePath) {
 	printf("Control Package received!\n");
 	printf("File size = %d, File name = %s\n", fileSize, filePath);
 
-	int bytesRead, bytesAcumulator = 0, i = 0;
+	/*int bytesRead, bytesAcumulator = 0, i = 0;
 	unsigned char * buffer = malloc(MAX_BUF_SIZE * sizeof(char));;
 	while(bytesAcumulator < fileSize){
 		bytesRead = rcvDataPkg(&buffer, i);
@@ -135,7 +139,7 @@ int receiveData(char * filePath) {
 		bytesAcumulator += bytesRead;
 		fwrite(buffer, sizeof(char), bytesRead, al->file);
 		i++;
-	}/*
+	}
 
 	if (fclose(al->file) < 0) {
 		printf("ERROR in senData(): error closing file!\n");
@@ -257,9 +261,8 @@ int sendDataPkg(char * buffer, int bytesRead, int i) {
 
 	dataPckg[2] = L1 + '0';
 	dataPckg[3] = L2 + '0';
-
 	memcpy(&dataPckg[4], buffer, bytesRead);
-
+	
 	printf("0 = %c, 1 = %c, 2 = %c, 3 = %c, size = %d\n", dataPckg[0], dataPckg[1], dataPckg[2], dataPckg[3], bytesRead);
 
 	if (llwrite(dataPckg, size) < 0) {
