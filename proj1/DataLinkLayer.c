@@ -136,8 +136,9 @@ int llwrite(unsigned char* buf, int bufSize) {
 
 
 		if (isCommand(receivedFrame, RR)) {
-			if(ll->sn != receivedFrame.sn)
+			if(ll->sn != receivedFrame.sn) {
 				ll->sn = receivedFrame.sn;
+			}
 
 			stopAlarm();
 			counter--;
@@ -175,12 +176,11 @@ int llread(unsigned char ** message) {
 				break;
 			case DATA:
 				if (frm.answer == RR && ll->sn == frm.sn) {
-					ll->sn = !ll->sn;
+					ll->sn = !frm.sn;
 					dataSize = frm.size - DATA_FRAME_SIZE;
 					*message = malloc(dataSize);
 					memcpy(*message, &frm.frame[4], dataSize);
-					printf("Msg = %s\n", *message);
-
+					disc = 1;
 				}
 				sendCommand(al->fd, frm.answer);
 				break;
@@ -223,30 +223,31 @@ int llclose() {
 			}
 			break;
 		case RECEIVER:
-			while(counter < ll->numRetries) {
-				if (counter == 0 || alarmFired) {
-					alarmFired = 0;
-					counter++;
-					setAlarm();
-					sendCommand(al->fd, DISC);
-					if (isCommand(receiveFrame(al->fd), UA)) {
-						printf("Connection successfully disconected!\n");
-						break;
-					}
-					else {
-						printf("ERROR in llclose(): could not disconect\n");
-						return ERROR;
+			if (isCommand(receiveFrame(al->fd), DISC)) {
+				while(counter < ll->numRetries) {
+					if (counter == 0 || alarmFired) {
+						alarmFired = 0;
+						counter++;
+						setAlarm();
+						sendCommand(al->fd, DISC);
+						if (isCommand(receiveFrame(al->fd), UA)) {
+							printf("Connection successfully disconected!\n");
+							break;
+						}
+						else {
+							printf("ERROR in llclose(): could not disconect\n");
+							return ERROR;
+						}
 					}
 				}
 			}
-
 			stopAlarm();
 			break;
 		default:
 			break;
 	}
 
-	return 0;
+	return 0;return ERROR;
 }
 
 int isCommand(Frame frm, Command cmd) {
@@ -299,6 +300,7 @@ unsigned char getBCC2(unsigned char* data, unsigned int size) {
 int sendDataFrame(int fd, unsigned char* data, unsigned int size) {
 	Frame df;
 	df.size =  size + DATA_FRAME_SIZE;
+
 
 	df.frame[0] = FLAG;
 	df.frame[1] = A03;
@@ -496,11 +498,13 @@ Frame receiveFrame(int fd) {
 		if (frm.answer == NONE)
 			frm.answer = RR;
 
-		frm.sn = (frm.frame[2] >> 6) & BIT(0);
+		frm.sn = (frm.frame[2] >> 5) & BIT(0);
 	}
-	else
+	else {
 		frm.type = COMMAND;
-
+		if (isCommand(frm, RR) || isCommand(frm, REJ))
+			frm.sn = (frm.frame[2] >> 5) & BIT(0);
+	}
 	return frm;
 }
 

@@ -93,12 +93,7 @@ int sendData(char * filePath) {
 	int bytesRead = 0, i = 0;
 	char * buffer = malloc(MAX_BUF_SIZE * sizeof(char));
 
-	bytesRead = fread(buffer, sizeof(char), MAX_BUF_SIZE, al->file);
-	printf("bytesRead begining = %d\n", bytesRead);
-	sendDataPkg(buffer, bytesRead, i);
-
-	/*while((bytesRead = fread(buffer, sizeof(char), MAX_BUF_SIZE, al->file)) > 0){
-		printf("bytesRead begining = %d\n", bytesRead);
+	while((bytesRead = fread(buffer, sizeof(char), MAX_BUF_SIZE, al->file)) > 0){
 		if(sendDataPkg(buffer, bytesRead, i) < 0) {
 			printf("ERROR in sendData(): error sending data package!\n");
 			return ERROR;
@@ -106,7 +101,6 @@ int sendData(char * filePath) {
 		printf("after sendDataPkg\n");
 		i++;
 	}
-	printf("bytesRead end = %d\n", bytesRead);
 
 	if (fclose(al->file) < 0) {
 		printf("ERROR in sendData(): error closing file!\n");
@@ -114,7 +108,7 @@ int sendData(char * filePath) {
 	}
 
 	if (sendCtrlPkg(CTRL_PKG_END, filePath) < 0)
-		return ERROR;*/
+		return ERROR;
 
 	return 0;
 }
@@ -131,21 +125,17 @@ int receiveData(char * filePath) {
 
 	int bytesRead, bytesAcumulator = 0, i = 0;
 	unsigned char * buffer = malloc(MAX_BUF_SIZE * sizeof(char));
-	bytesRead = rcvDataPkg(&buffer, i);
-		if(bytesRead < 0) {
-			printf("bitesRead < 0\n");
-			return ERROR;
-		}
-	/*
+
 	while(bytesAcumulator < fileSize){
 		bytesRead = rcvDataPkg(&buffer, i);
-		if(bytesRead < 0) {
+		printf("%d\n", bytesRead);
+		if(bytesRead < 0)
 			return ERROR;
-		}
 		bytesAcumulator += bytesRead;
 		fwrite(buffer, sizeof(char), bytesRead, al->file);
 		i++;
 	}
+	printf("Received bytes: %d\n", bytesAcumulator);
 
 	if (fclose(al->file) < 0) {
 		printf("ERROR in senData(): error closing file!\n");
@@ -153,7 +143,7 @@ int receiveData(char * filePath) {
 	}
 
 	if(rcvCtrlPkg(CTRL_PKG_END, &fileSize, &filePath) < 0)
-		return ERROR;*/
+		return ERROR;
 
 	return 0;
 }
@@ -262,14 +252,11 @@ int sendDataPkg(char * buffer, int bytesRead, int i) {
 	dataPckg[0] = CTRL_PKG_DATA + '0';
 	dataPckg[1] = i + '0';
 
-	int L1 = bytesRead / MAX_BUF_SIZE;
-	int L2 = bytesRead % MAX_BUF_SIZE;
-
-	dataPckg[2] = L1 + '0';
-	dataPckg[3] = L2 + '0';
+	dataPckg[2] = bytesRead / 256;
+	dataPckg[3] = bytesRead % 256;
 	memcpy(&dataPckg[4], buffer, bytesRead);
 	
-	printf("0 = %c, 1 = %c, 2 = %c, 3 = %c, size = %d\n", dataPckg[0], dataPckg[1], dataPckg[2], dataPckg[3], bytesRead);
+	printf("0 = %c, 1 = %c, 2 = %x, 3 = %x, size = %d\n", dataPckg[0], dataPckg[1], dataPckg[2], dataPckg[3], bytesRead);
 
 	if (llwrite(dataPckg, size) < 0) {
 		printf("ERROR in sendDataPkg(): llwrite() function error!\n");
@@ -283,20 +270,15 @@ int rcvDataPkg(unsigned char ** buffer,int i) {
 	unsigned char * info;
 	int bytes = 0;
 
+	printf("package nr %d\n", i);
+
 	if (llread(&info) < 0) {
 		printf("ERROR in rcvDataPkg(): llread() function error!\n");
 		return ERROR;
 	}
 
-
 	int C = info[0] - '0';
 	int N = info[1] - '0';
-	int L1 = info[2] - '0';
-	int L2 = info[3] - '0';
-
-	printf("C = %d, C char = %c, ctrl_pckg_data = %d\n", C, info[0],(int)CTRL_PKG_DATA);
-
-	printf("L1 = %d, L2 = %d\n", L1, L2);
 
 	if(C != CTRL_PKG_DATA) {
 		printf("ERROR in rcvDataPkg(): control field it's different from CTRL_PKG_DATA!\n");
@@ -307,6 +289,7 @@ int rcvDataPkg(unsigned char ** buffer,int i) {
 		return ERROR;
 	}
 
+	int L2 = info[2], L1 = info[3];
 	bytes = 256 * L2 + L1;
 
 	memcpy((*buffer), &info[4], bytes);
