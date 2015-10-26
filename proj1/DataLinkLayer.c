@@ -179,6 +179,7 @@ int llread(unsigned char ** message) {
 					dataSize = frm.size - DATA_FRAME_SIZE;
 					*message = malloc(dataSize);
 					memcpy(*message, &frm.frame[4], dataSize);
+					printf("Msg = %s\n", *message);
 
 				}
 				sendCommand(al->fd, frm.answer);

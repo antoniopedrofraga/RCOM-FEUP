@@ -90,12 +90,12 @@ int sendData(char * filePath) {
 
 	printf("Control Package sent!\n");
 
-	/*int bytesRead = 0, i = 0;
+	int bytesRead = 0, i = 0;
 	char * buffer = malloc(MAX_BUF_SIZE * sizeof(char));
 
 	bytesRead = fread(buffer, sizeof(char), MAX_BUF_SIZE, al->file);
 	printf("bytesRead begining = %d\n", bytesRead);
-	sendDataPkg(buffer, bytesRead, i);*/
+	sendDataPkg(buffer, bytesRead, i);
 
 	/*while((bytesRead = fread(buffer, sizeof(char), MAX_BUF_SIZE, al->file)) > 0){
 		printf("bytesRead begining = %d\n", bytesRead);
@@ -129,8 +129,14 @@ int receiveData(char * filePath) {
 	printf("Control Package received!\n");
 	printf("File size = %d, File name = %s\n", fileSize, filePath);
 
-	/*int bytesRead, bytesAcumulator = 0, i = 0;
-	unsigned char * buffer = malloc(MAX_BUF_SIZE * sizeof(char));;
+	int bytesRead, bytesAcumulator = 0, i = 0;
+	unsigned char * buffer = malloc(MAX_BUF_SIZE * sizeof(char));
+	bytesRead = rcvDataPkg(&buffer, i);
+		if(bytesRead < 0) {
+			printf("bitesRead < 0\n");
+			return ERROR;
+		}
+	/*
 	while(bytesAcumulator < fileSize){
 		bytesRead = rcvDataPkg(&buffer, i);
 		if(bytesRead < 0) {
