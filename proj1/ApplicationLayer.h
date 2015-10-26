@@ -25,4 +25,6 @@ int sendCtrlPkg(int ctrlField, char * filePath);
 
 int rcvCtrlPkg(int controlField, int * fileSize, char ** filePath);
 
-int sendDataPkg(char * buffer, int bytesRead);
+int sendDataPkg(char * buffer, int bytesRead, int i);
+
+int rcvDataPkg(unsigned char ** buffer,int i);

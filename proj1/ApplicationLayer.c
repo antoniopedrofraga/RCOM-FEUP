@@ -40,10 +40,19 @@ int initAppLayer(char* port, int status, char * filePath) {
 	if (llopen() == ERROR)
 		return ERROR;
 
-	if (al->status == TRANSMITTER)
-		sendData(filePath);
-	else if (al->status == RECEIVER)
-		receiveData(filePath);
+	if (al->status == TRANSMITTER) {
+		if(sendData(filePath) < 0) {
+			printf("ERROR sending data\n");
+			return ERROR;
+		}
+	} else if (al->status == RECEIVER) {
+		if(receiveData(filePath) < 0) {
+			printf("ERROR receiving data\n");
+			return ERROR;
+		}
+	}
+
+	llclose();
 
 	closeSerialPort();
 
@@ -67,7 +76,7 @@ FILE * openFile(char * filePath) {
 	if (stat(filePath, &st) == 0)
 		al->fileSize = st.st_size;
 	else {
-		printf("ERROR in openFile(): error getting file size\n");
+		printf("ERROR in openFile(): error getting file size!\n");
 		return NULL;
 	}
 
@@ -80,16 +89,27 @@ int sendData(char * filePath) {
 		return ERROR;
 
 	int bytesRead = 0, i = 0;
-	char * buffer;
+	char * buffer = malloc(MAX_BUF_SIZE * sizeof(char));
 
-	while((bytesRead = fread(buffer, sizeof(char), MAX_BUF_SIZE, file)) > 0){
-		if(sendDataPkg(buffer, bytesRead, &i) < 0)
+	while((bytesRead = fread(buffer, sizeof(char), MAX_BUF_SIZE, al->file)) > 0){
+		printf("bytesRead begining = %d\n", bytesRead);
+		if(sendDataPkg(buffer, bytesRead, i) < 0) {
+			printf("ERROR in sendData(): error sending data package!\n");
 			return ERROR;
+		}
+		printf("after sendDataPkg\n");
 		i++;
 	}
+	printf("bytesRead end = %d\n", bytesRead);
 
+	if (fclose(al->file) < 0) {
+		printf("ERROR in sendData(): error closing file!\n");
+		return ERROR;
+	}
 
-	llclose();
+	if (sendCtrlPkg(CTRL_PKG_END, filePath) < 0)
+		return ERROR;
+
 	return 0;
 }
 
@@ -100,17 +120,25 @@ int receiveData(char * filePath) {
 	if(rcvCtrlPkg(CTRL_PKG_START, &fileSize, &filePath) < 0)
 		return ERROR;
 
-	int bytesRead, bytesAcumulator = 0;
-	unsigned char ** info;
+	int bytesRead, bytesAcumulator = 0, i = 0;
+	unsigned char * buffer = malloc(MAX_BUF_SIZE * sizeof(char));;
 	while(bytesAcumulator < fileSize){
-		bytesRead = rcvDataPkg(info);
+		bytesRead = rcvDataPkg(&buffer, i);
 		if(bytesRead < 0) {
 			return ERROR;
 		}
 		bytesAcumulator += bytesRead;
+		fwrite(buffer, sizeof(char), bytesRead, al->file);
+		i++;
 	}
 
-	llclose();
+	if (fclose(al->file) < 0) {
+		printf("ERROR in senData(): error closing file!\n");
+		return ERROR;
+	}
+
+	if(rcvCtrlPkg(CTRL_PKG_END, &fileSize, &filePath) < 0)
+		return ERROR;
 
 	return 0;
 }
@@ -211,49 +239,68 @@ int rcvCtrlPkg(int controlField, int * fileSize, char ** filePath) {
 }
 
 
-int sendDataPkg(char * buffer, int bytesRead, int * i) {
+int sendDataPkg(char * buffer, int bytesRead, int i) {
+
 	int size = bytesRead + 4;
 	unsigned char dataPckg[size];
 
 	dataPckg[0] = CTRL_PKG_DATA + '0';
-	dataPckg[1] = (*i) + '0';
-	dataPckg[2] = (bytesRead / MAX_BUF_SIZE) + '0';
-	dataPckg[3] = (bytesRead % MAX_BUF_SIZE) + '0';
+	dataPckg[1] = i + '0';
 
-	memcpy(&dataPckg[4], buffer, bytesRead);
+	float L1 = bytesRead / MAX_BUF_SIZE;
+	float L2 = bytesRead % MAX_BUF_SIZE;
+
+	memcpy(&dataPckg[2], &L1, 1);
+
+	memcpy(&dataPckg[3], &L2, 1);
+
+	memcpy(&dataPckg[4], &buffer, bytesRead);
+
+	printf("0 = %c, 1 = %c, 2 = %c, 3 = %c, size = %d\n", dataPckg[0], dataPckg[1], dataPckg[2], dataPckg[3], bytesRead);
 
 	if (llwrite(dataPckg, size) < 0) {
 		printf("ERROR in sendDataPkg(): llwrite() function error!\n");
 		return ERROR;
 	}
-
 	return 0;
 }
 
-int rcvDataPkg(unsigned char ** info, int * i) {
+int rcvDataPkg(unsigned char ** buffer,int i) {
+
+	unsigned char * info;
 	int bytes = 0;
 
-	if (llread(info) < 0) {
+	if (llread(&info) < 0) {
 		printf("ERROR in rcvDataPkg(): llread() function error!\n");
 		return ERROR;
 	}
 
+
 	int C = info[0] - '0';
 	int N = info[1] - '0';
-	int L2 = info[2] - '0';
-	int L1 = info[3] - '0';
+	float L1;
+	memcpy(&L1, &info[2], 1);
+	float L2;
+	memcpy(&L2, &info[3], 1);
 
-	if(C != CTRL_PKG_DATA - '0') {
+	printf("C = %d, C char = %c, ctrl_pckg_data = %d\n", C, info[0],(int)CTRL_PKG_DATA);
+
+	printf("L1 = %f, L2 = %f\n", L1, L2);
+
+	if(C != CTRL_PKG_DATA) {
 		printf("ERROR in rcvDataPkg(): control field it's different from CTRL_PKG_DATA!\n");
 		return ERROR;
 	}
-
-	if(N != ++i) {
+	if(N != i) {
 		printf("ERROR in rcvDataPkg(): sequence number it's wrong!\n");
 		return ERROR;
 	}
 
-	bytes = strlen(info) - 4;
+	bytes = 256 * L2 + L1;
+
+	memcpy((*buffer), &info[4], bytes);
+
+	free(info);
 
 	return bytes;
 }

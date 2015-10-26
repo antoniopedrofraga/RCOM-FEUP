@@ -134,6 +134,7 @@ int llwrite(unsigned char* buf, int bufSize) {
 
 		receivedFrame = receiveFrame(al->fd);
 
+
 		if (isCommand(receivedFrame, RR)) {
 			if(ll->sn != receivedFrame.sn)
 				ll->sn = receivedFrame.sn;
@@ -303,7 +304,7 @@ int sendDataFrame(int fd, unsigned char* data, unsigned int size) {
 	df.frame[1] = A03;
 	df.frame[2] = ll->sn << 5;
 	df.frame[3] = df.frame[1] ^ df.frame[2];
-	memcpy(&df.frame[4], data, size);
+	memcpy(&df.frame[4], &data, size);
 	df.frame[4 + size] = getBCC2(data, size);
 	df.frame[5 + size] = FLAG;
 
@@ -485,6 +486,7 @@ Frame receiveFrame(int fd) {
 		// check BCC2
 		int dataSize = frm.size - DATA_FRAME_SIZE;
 		unsigned char BCC2 = getBCC2(&frm.frame[4], dataSize);
+		printf("BCC2 = 0x%x, frame = 0x%x\n", BCC2, frm.frame[4 + dataSize]);
 		if (frm.frame[4 + dataSize] != BCC2) {
 			printf("ERROR in receiveFrame(): BCC2 error\n");
 			sleep(1);
