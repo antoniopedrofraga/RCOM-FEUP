@@ -88,6 +88,8 @@ int sendData(char * filePath) {
 	if (sendCtrlPkg(CTRL_PKG_START, filePath) < 0)
 		return ERROR;
 
+	printf("Control Package sent!\n");
+
 	int bytesRead = 0, i = 0;
 	char * buffer = malloc(MAX_BUF_SIZE * sizeof(char));
 
@@ -102,13 +104,13 @@ int sendData(char * filePath) {
 	}
 	printf("bytesRead end = %d\n", bytesRead);
 
-	if (fclose(al->file) < 0) {
+	/*if (fclose(al->file) < 0) {
 		printf("ERROR in sendData(): error closing file!\n");
 		return ERROR;
 	}
 
 	if (sendCtrlPkg(CTRL_PKG_END, filePath) < 0)
-		return ERROR;
+		return ERROR;*/
 
 	return 0;
 }
@@ -120,6 +122,9 @@ int receiveData(char * filePath) {
 	if(rcvCtrlPkg(CTRL_PKG_START, &fileSize, &filePath) < 0)
 		return ERROR;
 
+	printf("Control Package received!\n");
+	printf("File size = %d, File name = %s\n", fileSize, filePath);
+
 	int bytesRead, bytesAcumulator = 0, i = 0;
 	unsigned char * buffer = malloc(MAX_BUF_SIZE * sizeof(char));;
 	while(bytesAcumulator < fileSize){
@@ -130,7 +135,7 @@ int receiveData(char * filePath) {
 		bytesAcumulator += bytesRead;
 		fwrite(buffer, sizeof(char), bytesRead, al->file);
 		i++;
-	}
+	}/*
 
 	if (fclose(al->file) < 0) {
 		printf("ERROR in senData(): error closing file!\n");
@@ -138,7 +143,7 @@ int receiveData(char * filePath) {
 	}
 
 	if(rcvCtrlPkg(CTRL_PKG_END, &fileSize, &filePath) < 0)
-		return ERROR;
+		return ERROR;*/
 
 	return 0;
 }
@@ -247,14 +252,13 @@ int sendDataPkg(char * buffer, int bytesRead, int i) {
 	dataPckg[0] = CTRL_PKG_DATA + '0';
 	dataPckg[1] = i + '0';
 
-	float L1 = bytesRead / MAX_BUF_SIZE;
-	float L2 = bytesRead % MAX_BUF_SIZE;
+	int L1 = bytesRead / MAX_BUF_SIZE;
+	int L2 = bytesRead % MAX_BUF_SIZE;
 
-	memcpy(&dataPckg[2], &L1, 1);
+	dataPckg[2] = L1 + '0';
+	dataPckg[3] = L2 + '0';
 
-	memcpy(&dataPckg[3], &L2, 1);
-
-	memcpy(&dataPckg[4], &buffer, bytesRead);
+	memcpy(&dataPckg[4], buffer, bytesRead);
 
 	printf("0 = %c, 1 = %c, 2 = %c, 3 = %c, size = %d\n", dataPckg[0], dataPckg[1], dataPckg[2], dataPckg[3], bytesRead);
 
@@ -278,14 +282,12 @@ int rcvDataPkg(unsigned char ** buffer,int i) {
 
 	int C = info[0] - '0';
 	int N = info[1] - '0';
-	float L1;
-	memcpy(&L1, &info[2], 1);
-	float L2;
-	memcpy(&L2, &info[3], 1);
+	int L1 = info[2] - '0';
+	int L2 = info[3] - '0';
 
 	printf("C = %d, C char = %c, ctrl_pckg_data = %d\n", C, info[0],(int)CTRL_PKG_DATA);
 
-	printf("L1 = %f, L2 = %f\n", L1, L2);
+	printf("L1 = %d, L2 = %d\n", L1, L2);
 
 	if(C != CTRL_PKG_DATA) {
 		printf("ERROR in rcvDataPkg(): control field it's different from CTRL_PKG_DATA!\n");

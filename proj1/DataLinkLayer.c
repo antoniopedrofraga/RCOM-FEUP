@@ -304,7 +304,7 @@ int sendDataFrame(int fd, unsigned char* data, unsigned int size) {
 	df.frame[1] = A03;
 	df.frame[2] = ll->sn << 5;
 	df.frame[3] = df.frame[1] ^ df.frame[2];
-	memcpy(&df.frame[4], &data, size);
+	memcpy(&df.frame[4], data, size);
 	df.frame[4 + size] = getBCC2(data, size);
 	df.frame[5 + size] = FLAG;
 
