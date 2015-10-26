@@ -394,7 +394,6 @@ Frame receiveFrame(int fd) {
 	int res, receiving = 1, state = 0, dataFrame = 0, i = 0;
 	Frame frm;
 	frm.type = INVALID;
-	tcflush(al->fd, TCIFLUSH);
 
 	while(receiving) {
 		res = read(fd, &c, 1);

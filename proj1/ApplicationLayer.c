@@ -92,7 +92,7 @@ int receiveData(char * filePath) {
 	if(rcvCtrlPkg(CTRL_PKG_START, &fileSize, &filePath) < 0)
 		return ERROR;
 
-	printf("Received control package. File size = %d / File Name  = %s\n", fileSize, filePath);
+	printf("Received control package.\nFile size = %d bytes/ File Name  = %s\n", fileSize, filePath);
 
 	llclose();
 
@@ -184,20 +184,19 @@ int rcvCtrlPkg(int controlField, int * fileSize, char ** filePath) {
 	}
 
 	acumulator++;
-
+	
 	int pathLength = (info[acumulator] - '0');
-	printf("%d\n", pathLength);
 	acumulator++;
 
 	char pathStr[MAX_STR_SIZE];
-
+	
 	for(i = 0; i < pathLength; i++) {
 		pathStr[i] = info[acumulator];
 		acumulator++;
 	}
 
 	pathStr[i] = '\0';
-	(*filePath) = pathStr;
+	strcpy((*filePath), pathStr);
 
 	return 0;
 }
