@@ -135,13 +135,15 @@ int llwrite(unsigned char* buf, int bufSize) {
 		receivedFrame = receiveFrame(al->fd);
 
 		if (isCommand(receivedFrame, RR)) {
-			if(ll->sn != receivedFrame.sn) ll->sn = receivedFrame.sn;
+			if(ll->sn != receivedFrame.sn)
+				ll->sn = receivedFrame.sn;
 
 			stopAlarm();
 			counter--;
 			break;
 
 		} else if (isCommand(receivedFrame, REJ)) {
+			printf("rejected\n");
 			counter = 0;
 			stopAlarm();
 		}
@@ -158,12 +160,12 @@ int llwrite(unsigned char* buf, int bufSize) {
 }
 
 int llread(unsigned char ** message) {
-	int disc = 0;
+	int disc = 0, dataSize;
 	Frame frm;
 
 	while (!disc) {
 		frm = receiveFrame(al->fd);
-
+		
 		switch (frm.type) {
 			case COMMAND:
 				if (isCommand(frm, DISC))
@@ -171,9 +173,13 @@ int llread(unsigned char ** message) {
 
 				break;
 			case DATA:
-				if (frm.answer == RR && ll->sn == frm.sn) 
+				if (frm.answer == RR && ll->sn == frm.sn) {
 					ll->sn = !ll->sn;
+					dataSize = frm.size - DATA_FRAME_SIZE;
+					*message = malloc(dataSize);
+					memcpy(*message, &frm.frame[4], dataSize);
 
+				}
 				sendCommand(al->fd, frm.answer);
 				break;
 			case INVALID:
@@ -215,27 +221,24 @@ int llclose() {
 			}
 			break;
 		case RECEIVER:
-			if (isCommand(receiveFrame(al->fd), DISC)) {
-				while(counter < ll->numRetries) {
-					if (counter == 0 || alarmFired) {
-						alarmFired = 0;
-						counter++;
-						setAlarm();
-						sendCommand(al->fd, DISC);
-						if (isCommand(receiveFrame(al->fd), UA)) {
-							printf("Connection successfully disconected!\n");
-							break;
-						}
-						else {
-							printf("ERROR in llclose(): could not disconect\n");
-							return ERROR;
-						}
+			while(counter < ll->numRetries) {
+				if (counter == 0 || alarmFired) {
+					alarmFired = 0;
+					counter++;
+					setAlarm();
+					sendCommand(al->fd, DISC);
+					if (isCommand(receiveFrame(al->fd), UA)) {
+						printf("Connection successfully disconected!\n");
+						break;
+					}
+					else {
+						printf("ERROR in llclose(): could not disconect\n");
+						return ERROR;
 					}
 				}
-
-				stopAlarm();
-
 			}
+
+			stopAlarm();
 			break;
 		default:
 			break;
@@ -282,7 +285,7 @@ int isCommand(Frame frm, Command cmd) {
 }
 
 unsigned char getBCC2(unsigned char* data, unsigned int size) {
-	unsigned char BCC;
+	unsigned char BCC = 0;
 
 	int i;
 	for (i = 0; i < size; i++)
@@ -391,6 +394,7 @@ Frame receiveFrame(int fd) {
 	int res, receiving = 1, state = 0, dataFrame = 0, i = 0;
 	Frame frm;
 	frm.type = INVALID;
+	tcflush(al->fd, TCIFLUSH);
 
 	while(receiving) {
 		res = read(fd, &c, 1);
@@ -450,9 +454,11 @@ Frame receiveFrame(int fd) {
 		case 4:
 			if (c == FLAG) {
 				frm.frame[i] = c;
+				i++;
+				frm.frame[i] = 0;
 				receiving = 0;
 
-				if (i > 4)
+				if (i > 5)
 					dataFrame = 1;
 			}
 			else {
@@ -472,14 +478,19 @@ Frame receiveFrame(int fd) {
 		frm = destuff(frm);
 		
 		// check BCC1
-		if (frm.frame[3] != (frm.frame[1] ^ frm.frame[2]))
+		if (frm.frame[3] != (frm.frame[1] ^ frm.frame[2])) {
+			printf("ERROR in receiveFrame(): BCC1 error\n");
 			frm.answer = REJ;
+		}
 		
 		// check BCC2
 		int dataSize = frm.size - DATA_FRAME_SIZE;
-		unsigned char BCC2 = getBCC2(&(frm.frame[4]), dataSize);
-		if (frm.frame[4 + dataSize] != BCC2)
+		unsigned char BCC2 = getBCC2(&frm.frame[4], dataSize);
+		if (frm.frame[4 + dataSize] != BCC2) {
+			printf("ERROR in receiveFrame(): BCC2 error\n");
+			sleep(1);
 			frm.answer = REJ;
+		}
 
 		if (frm.answer == NONE)
 			frm.answer = RR;
@@ -524,8 +535,11 @@ Frame stuff(Frame df) {
 
 Frame destuff(Frame df) {
 	Frame destuffedFrame;
+	destuffedFrame.sn = df.sn;
+	destuffedFrame.type = df.type;
+	destuffedFrame.answer = df.answer;
 	int j = 0;
-
+	
 	int i;
 	for (i = 0; i < df.size; i++) {
 		if (df.frame[i] == ESCAPE)
