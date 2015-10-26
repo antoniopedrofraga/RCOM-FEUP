@@ -8,7 +8,7 @@
 #define FRAME_SIZE 5
 #define DATA_FRAME_SIZE 6
 #define MAX_BUF_SIZE 256
-#define MAX_FRAME_SIZE 267
+#define MAX_FRAME_SIZE 512
 
 #define MAX_STR_SIZE 100
 
