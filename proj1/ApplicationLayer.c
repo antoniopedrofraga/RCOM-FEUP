@@ -98,7 +98,6 @@ int sendData(char * filePath) {
 			printf("ERROR in sendData(): error sending data package!\n");
 			return ERROR;
 		}
-		printf("after sendDataPkg\n");
 		i++;
 	}
 
@@ -138,7 +137,7 @@ int receiveData(char * filePath) {
 	printf("Received bytes: %d\n", bytesAcumulator);
 
 	if (fclose(al->file) < 0) {
-		printf("ERROR in senData(): error closing file!\n");
+		printf("ERROR in receiveData(): error closing file!\n");
 		return ERROR;
 	}
 
@@ -267,7 +266,7 @@ int sendDataPkg(char * buffer, int bytesRead, int i) {
 
 int rcvDataPkg(unsigned char ** buffer,int i) {
 
-	unsigned char * info;
+	unsigned char * info = NULL;
 	int bytes = 0;
 
 	printf("package nr %d\n", i);
@@ -277,14 +276,18 @@ int rcvDataPkg(unsigned char ** buffer,int i) {
 		return ERROR;
 	}
 
+	if (info == NULL)
+		return 0;
+
 	int C = info[0] - '0';
 	int N = info[1] - '0';
 
-	if(C != CTRL_PKG_DATA) {
+	if (C != CTRL_PKG_DATA) {
 		printf("ERROR in rcvDataPkg(): control field it's different from CTRL_PKG_DATA!\n");
 		return ERROR;
 	}
-	if(N != i) {
+	
+	if (N != i) {
 		printf("ERROR in rcvDataPkg(): sequence number it's wrong!\n");
 		return ERROR;
 	}

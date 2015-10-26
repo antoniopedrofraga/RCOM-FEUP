@@ -134,18 +134,16 @@ int llwrite(unsigned char* buf, int bufSize) {
 
 		receivedFrame = receiveFrame(al->fd);
 
-
 		if (isCommand(receivedFrame, RR)) {
-			if(ll->sn != receivedFrame.sn) {
+			if(ll->sn != receivedFrame.sn)
 				ll->sn = receivedFrame.sn;
-			}
 
 			stopAlarm();
 			counter--;
 			break;
 
 		} else if (isCommand(receivedFrame, REJ)) {
-			printf("rejected\n");
+			printf("Rejected\n");
 			counter = 0;
 			stopAlarm();
 		}
@@ -182,6 +180,9 @@ int llread(unsigned char ** message) {
 					memcpy(*message, &frm.frame[4], dataSize);
 					disc = 1;
 				}
+				else if (frm.answer == REJ)
+					ll->sn = frm.sn;
+
 				sendCommand(al->fd, frm.answer);
 				break;
 			case INVALID:
@@ -300,8 +301,7 @@ unsigned char getBCC2(unsigned char* data, unsigned int size) {
 int sendDataFrame(int fd, unsigned char* data, unsigned int size) {
 	Frame df;
 	df.size =  size + DATA_FRAME_SIZE;
-
-
+	
 	df.frame[0] = FLAG;
 	df.frame[1] = A03;
 	df.frame[2] = ll->sn << 5;
@@ -311,9 +311,9 @@ int sendDataFrame(int fd, unsigned char* data, unsigned int size) {
 	df.frame[5 + size] = FLAG;
 
 	df = stuff(df);
-
+	
 	if (write(fd, df.frame, df.size) != df.size) {
-		printf("ERROR in sendFrame(): could not send frame\n");
+		printf("ERROR in sendDataFrame(): could not send frame\n");
 		return ERROR;
 	}
 
@@ -513,16 +513,14 @@ Frame stuff(Frame df) {
 	unsigned int newSize = df.size;
 
 	int i;
-	for (i = 1; i < df.size - 1; i++) {
+	for (i = 1; i < (df.size - 1); i++) {
 		if (df.frame[i] == FLAG || df.frame[i] == ESCAPE)
 			newSize++;
 	}
 
-	stuffedFrame.size = newSize;
 	stuffedFrame.frame[0] = df.frame[0];
-
 	int j = 1;
-	for (i = 1; i < df.size - 1; i++) {
+	for (i = 1; i < (df.size - 1); i++) {
 		if (df.frame[i] == FLAG || df.frame[i] == ESCAPE) {
 			stuffedFrame.frame[j] = ESCAPE;
 			stuffedFrame.frame[++j] = df.frame[i] ^ 0x20;
@@ -531,11 +529,11 @@ Frame stuff(Frame df) {
 			stuffedFrame.frame[j] = df.frame[i];
 		j++;
 	}
-
+	
 	stuffedFrame.frame[j] = df.frame[i];
-
+	stuffedFrame.size = newSize;
+	
 	return stuffedFrame;
-
 }
 
 Frame destuff(Frame df) {
