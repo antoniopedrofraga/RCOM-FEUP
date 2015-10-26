@@ -26,8 +26,7 @@ int main(int argc, char** argv)
     	mode = TRANSMITTER;
     }
 
-    char tmp[20];
-    initAppLayer(argv[1], mode, tmp);
+    initAppLayer(argv[1], mode, argv[3]);
     return 0;
 }
 

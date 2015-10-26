@@ -27,9 +27,9 @@ int initAppLayer(char* port, int status, char * filePath) {
 	}
 	al->status = status;
 
-	//al->file = openFile(filePath);
+	al->file = openFile(filePath);
 	
-	//if(al->file == NULL ) return ERROR;	
+	if(al->file == NULL ) return ERROR;	
 
 	if (initLinkLayer(port, BAUDRATE, 3, 3) < 0) {
 		printf("ERROR in initAppLayer(): could not initialize link layer\n");
@@ -38,8 +38,8 @@ int initAppLayer(char* port, int status, char * filePath) {
 	
 	if(llopen() == ERROR) return ERROR;
 
-	if(al->status == TRANSMITTER) ;
-	else if(al->status == RECEIVER) ;
+	if(al->status == TRANSMITTER) sendData(filePath);
+	else if(al->status == RECEIVER) receiveData(filePath);
 
 	llclose();
 
@@ -72,12 +72,126 @@ FILE * openFile(char * filePath) {
 	return file;	
 }
 
-int sendData() {
+int sendData(char * filePath) {
 
-	//if(sendControlPackage(START, ) < 0) return ERROR;
+	if(sendCtrlPkg(CTRL_PKG_START, filePath) < 0) return ERROR;
+
+	printf("all ok\n");
 
 	return 0;
 }
 
 
 
+int receiveData(char * filePath) {
+	int fileSize;
+	if(rcvCtrlPkg(CTRL_PKG_START, &fileSize, &filePath) < 0) return ERROR;
+
+	printf("All ok !\nSize = %d , Path  = %s\n", fileSize, filePath);
+
+	return 0;
+}
+
+
+int sendCtrlPkg(int ctrlField, char * filePath) {
+
+	char sizeString[16];
+	sprintf(sizeString, "%d", al->fileSize);
+
+	int size = 5 + strlen(sizeString) + strlen(filePath);
+
+	unsigned char ctrlPckg[size];
+
+	ctrlPckg[0] = ctrlField + '0';
+	ctrlPckg[1] = PARAM_SIZE + '0';
+	ctrlPckg[2] = strlen(sizeString) + '0';
+
+	printf("paramSize = %c, %c, %c\n", ctrlPckg[0], ctrlPckg[1], ctrlPckg[2]);
+
+	int i, acumulator = 3;
+	for(i = 0; i < strlen(sizeString); i++) {
+		ctrlPckg[acumulator] = sizeString[i];
+		printf("%c\n", ctrlPckg[acumulator]);
+		acumulator++;;
+	}
+
+	ctrlPckg[acumulator] = PARAM_NAME + '0';
+	acumulator++;
+	ctrlPckg[acumulator] = strlen(filePath) + '0';
+	acumulator++;
+
+	printf("Param name = %c, %c\n\nName string:\n", ctrlPckg[acumulator - 2], ctrlPckg[acumulator - 1]);
+
+	printf("File Path Size= %d\n", strlen(filePath));
+
+	for(i = 0; i < strlen(filePath); i++) {
+		ctrlPckg[acumulator] = filePath[i];
+		printf("%c\n", ctrlPckg[acumulator]);
+		acumulator++;;
+	}
+
+	if (llwrite(ctrlPckg, size) < 0) {
+		printf("ERROR in sendCtrlPckg(): \n");
+		return ERROR;
+	}
+
+	return 0;
+}
+
+
+int rcvCtrlPkg(int controlField, int * fileSize, char ** filePath) {
+
+	unsigned char * info;
+
+	if (llread(&info) < 0) {
+		printf("ERROR in rcvCtrlPckg(): \n");
+		return ERROR;
+	}
+
+	if(info[0] != controlField) {
+		printf("ERROR in rcvCtrlPckg(): unexpected control field!\n");
+		return ERROR;
+	}
+
+	if(info[1] != PARAM_SIZE) {
+		printf("ERROR in rcvCtrlPckg(): unexpected size param!\n");
+		return ERROR;
+	}
+
+	int i, fileSizeLength = info[2], acumulator = 3;
+
+	char fileSizeStr[MAX_STR_SIZE];
+
+	for(i = 0; i < fileSizeLength; i++) {
+		fileSizeStr[i] = info[acumulator];
+		acumulator++;
+	}
+
+	fileSizeStr[acumulator - 3] = '\0';
+
+	(*fileSize) = atoi(fileSizeStr);
+
+	if(info[acumulator] != PARAM_NAME) {
+		printf("ERROR in rcvCtrlPckg(): unexpected name param!\n");
+		return ERROR;
+	}
+
+	acumulator++;
+
+	int pathLength = info[acumulator];
+
+	acumulator++;
+
+	char pathStr[MAX_STR_SIZE];
+
+	for(i = 0; i < pathLength; i++) {
+		pathStr[i] = info[acumulator];
+		acumulator++;
+	}
+
+	pathStr[acumulator] = '\0';
+
+	(*filePath) = pathStr;
+
+	return 0;
+}

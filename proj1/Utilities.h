@@ -9,4 +9,10 @@
 #define FRAME_SIZE 5
 #define DATA_FRAME_SIZE 6
 
+#define MAX_STR_SIZE 100
+
 #define BIT(n) (0x01 << n)
+
+typedef enum {
+	CTRL_PKG_DATA = 0, CTRL_PKG_START = 1, CTRL_PKG_END = 2
+} ControlPackageType;

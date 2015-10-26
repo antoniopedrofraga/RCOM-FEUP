@@ -149,7 +149,7 @@ int llwrite(unsigned char* buf, int bufSize) {
 	}
 
 	if (counter >= ll->numRetries) {
-		printf("ERROR in llopen(): could not establish a connection\n");
+		printf("ERROR in llwrite(): could not establish a connection\n");
 		stopAlarm();
 		return ERROR;
 	}
@@ -175,6 +175,8 @@ int llread(unsigned char ** message) {
 					ll->sn = !ll->sn;
 
 				sendCommand(al->fd, frm.answer);
+				break;
+			case INVALID:
 				break;
 			default:
 				return ERROR;
