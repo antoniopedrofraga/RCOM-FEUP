@@ -24,6 +24,20 @@ typedef enum {
 } FrameType;
 
 typedef struct {
+	int timeout;
+
+	int msgSent;
+	int msgRcvd;
+
+	int rrSent;
+	int rrRcvd;
+
+	int rejSent;
+	int rejRcvd;
+
+} Statistics;
+
+typedef struct {
 	char port[20];
 	int baudRate;
 	unsigned int sn;
@@ -31,6 +45,7 @@ typedef struct {
 	unsigned int numRetries;
 	char frame[MAX_FRAME_SIZE];
 	struct termios oldtio, newtio;
+	Statistics statistics;
 } LinkLayer;
 
 typedef struct {
@@ -40,6 +55,7 @@ typedef struct {
 	FrameType type;
 	Command answer;
 } Frame;
+
 
 extern LinkLayer* ll;
 

@@ -24,6 +24,14 @@ int initLinkLayer(char* port, int baudRate, unsigned int timeout, unsigned int n
 	ll->timeout = timeout;
 	ll->numRetries = numRetries;
 
+	ll->statistics.timeout = 0;
+	ll->statistics.msgSent = 0;
+	ll->statistics.msgRcvd = 0;
+	ll->statistics.rrSent = 0;
+	ll->statistics.rrRcvd = 0;
+	ll->statistics.rejSent = 0;
+	ll->statistics.rejRcvd = 0;	
+
 	if (setNewTermios() < 0)
     	return ERROR;
 
@@ -135,6 +143,8 @@ int llwrite(unsigned char* buf, int bufSize) {
 		receivedFrame = receiveFrame(al->fd);
 
 		if (isCommand(receivedFrame, RR)) {
+			ll->statistics.rrSent++;
+
 			if(ll->sn != receivedFrame.sn)
 				ll->sn = receivedFrame.sn;
 
@@ -143,6 +153,8 @@ int llwrite(unsigned char* buf, int bufSize) {
 			break;
 
 		} else if (isCommand(receivedFrame, REJ)) {
+			ll->statistics.rejSent++;
+			
 			printf("Rejected\n");
 			counter = 0;
 			stopAlarm();
@@ -174,14 +186,17 @@ int llread(unsigned char ** message) {
 				break;
 			case DATA:
 				if (frm.answer == RR && ll->sn == frm.sn) {
+					ll->statistics.rrRcvd++;
 					ll->sn = !frm.sn;
 					dataSize = frm.size - DATA_FRAME_SIZE;
 					*message = malloc(dataSize);
 					memcpy(*message, &frm.frame[4], dataSize);
 					disc = 1;
 				}
-				else if (frm.answer == REJ)
+				else if (frm.answer == REJ) {
+					ll->statistics.rejRcvd++;
 					ll->sn = frm.sn;
+				}
 
 				sendCommand(al->fd, frm.answer);
 				break;

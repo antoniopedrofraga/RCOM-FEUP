@@ -9,14 +9,14 @@
 #include <unistd.h>
 #include <signal.h>
 
-
 #include "DataLinkLayer.h"
 #include "Utilities.h"
 #include "ApplicationLayer.h"
+#include "Cli.h"
 
 ApplicationLayer* al;
 
-int initAppLayer(char* port, int status, char * filePath) {
+int initAppLayer(char* port, int status, char * filePath, int timeout, int retries) {
 	al = (ApplicationLayer*) malloc(sizeof(ApplicationLayer));
 
 	al->fd = openSerialPort(port);
@@ -29,10 +29,11 @@ int initAppLayer(char* port, int status, char * filePath) {
 
 	al->file = openFile(filePath);
 	
+	
 	if (al->file == NULL )
 		return ERROR;	
 
-	if (initLinkLayer(port, BAUDRATE, 3, 3) < 0) {
+	if (initLinkLayer(port, BAUDRATE, timeout, retries) < 0) {
 		printf("ERROR in initAppLayer(): could not initialize link layer\n");
 		return ERROR;
 	}
@@ -42,12 +43,10 @@ int initAppLayer(char* port, int status, char * filePath) {
 
 	if (al->status == TRANSMITTER) {
 		if(sendData(filePath) < 0) {
-			printf("ERROR sending data\n");
 			return ERROR;
 		}
 	} else if (al->status == RECEIVER) {
 		if(receiveData(filePath) < 0) {
-			printf("ERROR receiving data\n");
 			return ERROR;
 		}
 	}
@@ -55,6 +54,8 @@ int initAppLayer(char* port, int status, char * filePath) {
 	llclose();
 
 	closeSerialPort();
+	
+	printStatistics();
 
 	return 0;
 }
@@ -87,10 +88,10 @@ int sendData(char * filePath) {
 
 	if (sendCtrlPkg(CTRL_PKG_START, filePath) < 0)
 		return ERROR;
+	
+	ll->statistics.msgSent++;
 
-	printf("Control Package sent!\n");
-
-	int bytesRead = 0, i = 0;
+	int bytesRead = 0, i = 0, bytesAcumulator = 0;;
 	char * buffer = malloc(MAX_BUF_SIZE * sizeof(char));
 
 	while((bytesRead = fread(buffer, sizeof(char), MAX_BUF_SIZE, al->file)) > 0){
@@ -98,7 +99,12 @@ int sendData(char * filePath) {
 			printf("ERROR in sendData(): error sending data package!\n");
 			return ERROR;
 		}
+		ll->statistics.msgSent++;
 		i++;
+		if(i > 207)
+			i = 0;
+		bytesAcumulator += bytesRead;
+		printProgressBar(filePath, bytesAcumulator, al->fileSize, 0);
 	}
 
 	if (fclose(al->file) < 0) {
@@ -109,6 +115,8 @@ int sendData(char * filePath) {
 	if (sendCtrlPkg(CTRL_PKG_END, filePath) < 0)
 		return ERROR;
 
+	ll->statistics.msgSent++;
+
 	return 0;
 }
 
@@ -118,9 +126,7 @@ int receiveData(char * filePath) {
 	int fileSize;
 	if(rcvCtrlPkg(CTRL_PKG_START, &fileSize, &filePath) < 0)
 		return ERROR;
-
-	printf("Control Package received!\n");
-	printf("File size = %d, File name = %s\n", fileSize, filePath);
+	ll->statistics.msgRcvd++;
 
 	int bytesRead, bytesAcumulator = 0, i = 0;
 	unsigned char * buffer = malloc(MAX_BUF_SIZE * sizeof(char));
@@ -130,11 +136,14 @@ int receiveData(char * filePath) {
 		printf("%d\n", bytesRead);
 		if(bytesRead < 0)
 			return ERROR;
+		ll->statistics.msgRcvd++;
 		bytesAcumulator += bytesRead;
 		fwrite(buffer, sizeof(char), bytesRead, al->file);
 		i++;
+		if(i > 207)
+			i = 0;
+		printProgressBar(filePath, bytesAcumulator, al->fileSize, 1);
 	}
-	printf("Received bytes: %d\n", bytesAcumulator);
 
 	if (fclose(al->file) < 0) {
 		printf("ERROR in receiveData(): error closing file!\n");
@@ -143,6 +152,7 @@ int receiveData(char * filePath) {
 
 	if(rcvCtrlPkg(CTRL_PKG_END, &fileSize, &filePath) < 0)
 		return ERROR;
+	ll->statistics.msgRcvd++;
 
 	return 0;
 }
@@ -254,8 +264,6 @@ int sendDataPkg(char * buffer, int bytesRead, int i) {
 	dataPckg[2] = bytesRead / 256;
 	dataPckg[3] = bytesRead % 256;
 	memcpy(&dataPckg[4], buffer, bytesRead);
-	
-	printf("0 = %c, 1 = %c, 2 = %x, 3 = %x, size = %d\n", dataPckg[0], dataPckg[1], dataPckg[2], dataPckg[3], bytesRead);
 
 	if (llwrite(dataPckg, size) < 0) {
 		printf("ERROR in sendDataPkg(): llwrite() function error!\n");
@@ -301,3 +309,17 @@ int rcvDataPkg(unsigned char ** buffer,int i) {
 
 	return bytes;
 }
+
+void printStatistics() {
+	printf("\n");
+	printf("Some statistics:\n\n");
+	printf("Timeouts: %d\n\n", ll->statistics.timeout);
+	printf("Sent messages: %d\n", ll->statistics.msgSent);
+	printf("Received messages: %d\n\n", ll->statistics.msgRcvd);
+	printf("Sent RR: %d\n", ll->statistics.rrSent);
+	printf("Received RR:%d\n\n", ll->statistics.rrRcvd);
+	printf("Sent REJ: %d\n", ll->statistics.rejSent);
+	printf("Received REJ: %d\n\n", ll->statistics.rejRcvd);
+}
+
+

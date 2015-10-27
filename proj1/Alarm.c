@@ -12,6 +12,8 @@ void handler(int signal) {
 
 	alarmFired = 1;
 
+	ll->statistics.timeout++;
+
 	printf("Timeout! Retrying...\n");
 }
 
