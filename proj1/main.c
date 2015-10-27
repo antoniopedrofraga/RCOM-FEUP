@@ -11,15 +11,15 @@
 int main(int argc, char** argv)
 {
     
-	if ( argc > 1) {
+	if (argc > 1) {
 		clrscr();
 		printf("ERROR! This programs takes no arguments\n");
 		exit(ERROR);
 	}
-    
-    int mode = getMode();
 
- 	if( mode == ERROR )
+	int mode = getMode();
+
+ 	if (mode == ERROR )
 		return ERROR;
 	else if( mode == RECEIVER || mode == TRANSMITTER)
 		;
@@ -34,9 +34,8 @@ int main(int argc, char** argv)
 
     	char * fileName = getFileName(mode);
 
+    	initAppLayer(port, mode, fileName, timeout, retries);
 
-    initAppLayer(port, mode, fileName, timeout, retries);
-
-    return 0;
+   	return 0;
 }
 

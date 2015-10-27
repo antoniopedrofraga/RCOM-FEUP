@@ -110,7 +110,7 @@ int llopen() {
 			if (counter < ll->numRetries)
 				printf("Connection successfully established!\n");
 			else {
-				printf("ERROR in llopen(): could not establish a connection\n");
+				printf("Could not establish a connection: maximum number of retries reached\n");
 				return ERROR;
 			}
 			break;
@@ -154,8 +154,6 @@ int llwrite(unsigned char* buf, int bufSize) {
 
 		} else if (isCommand(receivedFrame, REJ)) {
 			ll->statistics.rejSent++;
-			
-			printf("Rejected\n");
 			counter = 0;
 			stopAlarm();
 		}
@@ -163,7 +161,7 @@ int llwrite(unsigned char* buf, int bufSize) {
 	}
 
 	if (counter >= ll->numRetries) {
-		printf("ERROR in llwrite(): could not establish a connection\n");
+		printf("Could not send frame: maximum number of retries reached\n");
 		stopAlarm();
 		return ERROR;
 	}
@@ -198,7 +196,8 @@ int llread(unsigned char ** message) {
 					ll->sn = frm.sn;
 				}
 
-				sendCommand(al->fd, frm.answer);
+				if (frm.answer != NONE)
+					sendCommand(al->fd, frm.answer);
 				break;
 			case INVALID:
 				break;
@@ -232,38 +231,41 @@ int llclose() {
 
 			stopAlarm();
 			if (counter < ll->numRetries)
-				printf("Connection successfully disconected!\n");
+				printf("Connection successfully terminated!\n");
 			else {
-				printf("ERROR in llclose(): could not disconect\n");
+				printf("Could not disconect: maximum number of retries reached\n");
 				return ERROR;
 			}
 			break;
 		case RECEIVER:
-			if (isCommand(receiveFrame(al->fd), DISC)) {
-				while(counter < ll->numRetries) {
-					if (counter == 0 || alarmFired) {
-						alarmFired = 0;
-						counter++;
-						setAlarm();
-						sendCommand(al->fd, DISC);
-						if (isCommand(receiveFrame(al->fd), UA)) {
-							printf("Connection successfully disconected!\n");
-							break;
-						}
-						else {
-							printf("ERROR in llclose(): could not disconect\n");
-							return ERROR;
-						}
+			while (!isCommand(receiveFrame(al->fd), DISC))
+				continue;
+
+			while(counter < ll->numRetries) {
+				if (counter == 0 || alarmFired) {
+					alarmFired = 0;
+					counter++;
+					setAlarm();
+					sendCommand(al->fd, DISC);
+					if (isCommand(receiveFrame(al->fd), UA)) {
+						printf("Connection successfully terminated!\n");
+						break;
 					}
 				}
 			}
 			stopAlarm();
+			if (counter < ll->numRetries)
+				printf("Connection successfully terminated!\n");
+			else {
+				printf("Could not disconect: maximum number of retries reached\n");
+				return ERROR;
+			}
 			break;
 		default:
 			break;
 	}
 
-	return 0;return ERROR;
+	return 0;
 }
 
 int isCommand(Frame frm, Command cmd) {
@@ -497,16 +499,14 @@ Frame receiveFrame(int fd) {
 		// check BCC1
 		if (frm.frame[3] != (frm.frame[1] ^ frm.frame[2])) {
 			printf("ERROR in receiveFrame(): BCC1 error\n");
-			frm.answer = REJ;
+			return frm;
 		}
 		
 		// check BCC2
 		int dataSize = frm.size - DATA_FRAME_SIZE;
 		unsigned char BCC2 = getBCC2(&frm.frame[4], dataSize);
-		if (frm.frame[4 + dataSize] != BCC2) {
-			printf("BCC2 = 0x%x, frame = 0x%x\n", BCC2, frm.frame[4 + dataSize]);			
+		if (frm.frame[4 + dataSize] != BCC2) {			
 			printf("ERROR in receiveFrame(): BCC2 error\n");
-			sleep(1);
 			frm.answer = REJ;
 		}
 

@@ -6,11 +6,11 @@
 
 int getMode() {
 	int mode = ERROR;
-	while(mode != 1 && mode != 2) {
+	while (mode != 1 && mode != 2) {
 		clrscr();
 		printf("# Do you want to receive or send data?\n\n");
-		printf("1 - SEND\n");
-		printf("2 - RECEIVE\n\n> ");
+		printf("\t1. Send\n");
+		printf("\t2. Receive\n\n> ");
 		mode = getchar() - '0';
 	}
 	return mode - 1;		
@@ -19,15 +19,15 @@ int getMode() {
 
 char * getPort() {
 	int port = ERROR;
-	while(port != 1 && port != 2) {
+	while (port != 1 && port != 2) {
 		clrscr();
 		printf("# Which port do you want to use?\n\n");
-		printf("1 - /dev/ttyS0\n");
-		printf("2 - /dev/ttyS4\n\n> ");
+		printf("\t1. /dev/ttyS0\n");
+		printf("\t2. /dev/ttyS4\n\n> ");
 		port = getchar() - '0';
 	}
 	
-	if ( port == 1)
+	if (port == 1)
 		return "/dev/ttyS0";
 	else
 		return "/dev/ttyS4";
@@ -37,7 +37,7 @@ char * getPort() {
 char * getFileName(int mode) {
 	char * fileName = malloc(150*sizeof(char));;
 	clrscr();
-	if(mode == 0)
+	if (mode == 0)
 		printf("# Type the name of file to be read: \n\n> ");
 	else
 		printf("# Type the name of the output file: \n\n> ");
@@ -49,7 +49,7 @@ char * getFileName(int mode) {
 
 int getRetries() {
 	int retries = ERROR;
-	while(retries <= 0) {
+	while (retries <= 0) {
 		clrscr();
 		printf("# Which is the maximum number of retries to send a package?\n\n> ");
 	
@@ -61,7 +61,7 @@ int getRetries() {
 
 int getTimeout() {
 	int timeout = ERROR;
-	while(timeout <= 0) {
+	while (timeout <= 0) {
 		clrscr();
 		printf("# Which is the timeout waiting time in seconds?\n\n> ");
 	
@@ -73,26 +73,26 @@ int getTimeout() {
 
 void printProgressBar(char * fileName, int bytes, int size, int mode) {
 	clrscr();
-	if(mode == 0)
+	if (mode == 0)
 		printf("Sending %s...\n\n", fileName);
 	else if (mode == 1)
 		printf("Receiving %s...\n\n", fileName);
 	
 	printf("[");
-	int i;
-	for(i = 0; i < 20; i++) {
-		if(((float)bytes / (float)size ) > ( (float)i / 20))
+	int i, barSize = 30;
+	for (i = 0; i < barSize; i++) {
+		if(((float)bytes / (float)size ) > ( (float)i / barSize))
 			printf("=");
 		else
 			printf(" ");
 	}
-	printf("]\t");
-	printf(" %d %%/t%d / %d bytes\n\n", (int)((float)bytes / (float)size * 100), bytes, size);
+	printf("]");
+	printf("  %d %%\t%d / %d bytes\n\n", (int)((float)bytes / (float)size * 100), bytes, size);
 }
 
 void printWaiting(int mode) {
 	clrscr();
-	if(mode == 0)
+	if (mode == 0)
 		printf("Waiting for receiver...\n\n");
 	else
 		printf("Waiting for transmitter...\n\n");	

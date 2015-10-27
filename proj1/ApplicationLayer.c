@@ -29,7 +29,6 @@ int initAppLayer(char* port, int status, char * filePath, int timeout, int retri
 
 	al->file = openFile(filePath);
 	
-	
 	if (al->file == NULL )
 		return ERROR;	
 
@@ -38,19 +37,16 @@ int initAppLayer(char* port, int status, char * filePath, int timeout, int retri
 		return ERROR;
 	}
 	
+	printWaiting(al->status);
+	
 	if (llopen() == ERROR)
 		return ERROR;
 
-	if (al->status == TRANSMITTER) {
-		if(sendData(filePath) < 0) {
-			return ERROR;
-		}
-	} else if (al->status == RECEIVER) {
-		if(receiveData(filePath) < 0) {
-			return ERROR;
-		}
-	}
-
+	if (al->status == TRANSMITTER)
+		sendData(filePath);
+	else if (al->status == RECEIVER)
+		receiveData(filePath);
+	
 	llclose();
 
 	closeSerialPort();
@@ -85,8 +81,6 @@ FILE * openFile(char * filePath) {
 }
 
 int sendData(char * filePath) {
-	
-	printWaiting(TRANSMITTER);
 
 	if (sendCtrlPkg(CTRL_PKG_START, filePath) < 0)
 		return ERROR;
@@ -97,13 +91,12 @@ int sendData(char * filePath) {
 	char * buffer = malloc(MAX_BUF_SIZE * sizeof(char));
 
 	while((bytesRead = fread(buffer, sizeof(char), MAX_BUF_SIZE, al->file)) > 0){
-		if(sendDataPkg(buffer, bytesRead, i) < 0) {
-			printf("ERROR in sendData(): error sending data package!\n");
+		if(sendDataPkg(buffer, bytesRead, i) < 0)
 			return ERROR;
-		}
+
 		ll->statistics.msgSent++;
 		i++;
-		if(i > 207)
+		if (i > 207)
 			i = 0;
 		bytesAcumulator += bytesRead;
 		printProgressBar(filePath, bytesAcumulator, al->fileSize, 0);
@@ -119,6 +112,8 @@ int sendData(char * filePath) {
 
 	ll->statistics.msgSent++;
 
+	printf("File sent!\n");
+
 	return 0;
 }
 
@@ -126,8 +121,6 @@ int sendData(char * filePath) {
 
 int receiveData(char * filePath) {
 	int fileSize;
-
-	printWaiting(TRANSMITTER);
 
 	if(rcvCtrlPkg(CTRL_PKG_START, &fileSize, &filePath) < 0)
 		return ERROR;
@@ -138,7 +131,7 @@ int receiveData(char * filePath) {
 	int bytesRead, bytesAcumulator = 0, i = 0;
 	unsigned char * buffer = malloc(MAX_BUF_SIZE * sizeof(char));
 
-	while(bytesAcumulator < fileSize){
+	while (bytesAcumulator < fileSize){
 		bytesRead = rcvDataPkg(&buffer, i);
 		printf("%d\n", bytesRead);
 		if(bytesRead < 0)
@@ -147,7 +140,7 @@ int receiveData(char * filePath) {
 		bytesAcumulator += bytesRead;
 		fwrite(buffer, sizeof(char), bytesRead, al->file);
 		i++;
-		if(i > 207)
+		if (i > 207)
 			i = 0;
 		printProgressBar(filePath, bytesAcumulator, al->fileSize, 1);
 	}
@@ -157,9 +150,12 @@ int receiveData(char * filePath) {
 		return ERROR;
 	}
 
-	if(rcvCtrlPkg(CTRL_PKG_END, &fileSize, &filePath) < 0)
+	if (rcvCtrlPkg(CTRL_PKG_END, &fileSize, &filePath) < 0)
 		return ERROR;
+
 	ll->statistics.msgRcvd++;
+
+	printf("File received!\n");
 
 	return 0;
 }
@@ -276,6 +272,7 @@ int sendDataPkg(char * buffer, int bytesRead, int i) {
 		printf("ERROR in sendDataPkg(): llwrite() function error!\n");
 		return ERROR;
 	}
+
 	return 0;
 }
 
@@ -317,12 +314,12 @@ int rcvDataPkg(unsigned char ** buffer,int i) {
 
 void printStatistics() {
 	printf("\n");
-	printf("Some statistics:\n\n");
+	printf("### Statistics ###\n\n");
 	printf("Timeouts: %d\n\n", ll->statistics.timeout);
 	printf("Sent messages: %d\n", ll->statistics.msgSent);
 	printf("Received messages: %d\n\n", ll->statistics.msgRcvd);
 	printf("Sent RR: %d\n", ll->statistics.rrSent);
-	printf("Received RR:%d\n\n", ll->statistics.rrRcvd);
+	printf("Received RR: %d\n\n", ll->statistics.rrRcvd);
 	printf("Sent REJ: %d\n", ll->statistics.rejSent);
 	printf("Received REJ: %d\n\n", ll->statistics.rejRcvd);
 }
