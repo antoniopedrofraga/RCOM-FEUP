@@ -75,7 +75,7 @@ int getTimeout() {
 
 int getPkgSize() {
 	int pkgSize = ERROR;
-	while (pkgSize <= 0) {
+	while (pkgSize <= 0 || pkgSize > 512) {
 		clrscr();
 		printf("# What is the maximum package size?\n\n> ");
 	
