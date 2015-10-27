@@ -1,7 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include "Cli.h"
 #include "Utilities.h"
+#include "DataLinkLayer.h"
 
 
 int getMode() {
@@ -21,7 +23,7 @@ char * getPort() {
 	int port = ERROR;
 	while (port != 1 && port != 2) {
 		clrscr();
-		printf("# Which port do you want to use?\n\n");
+		printf("# What port do you want to use?\n\n");
 		printf("\t1. /dev/ttyS0\n");
 		printf("\t2. /dev/ttyS4\n\n> ");
 		port = getchar() - '0';
@@ -38,7 +40,7 @@ char * getFileName(int mode) {
 	char * fileName = malloc(150*sizeof(char));;
 	clrscr();
 	if (mode == 0)
-		printf("# Type the name of file to be read: \n\n> ");
+		printf("# Type the name of file to be sent: \n\n> ");
 	else
 		printf("# Type the name of the output file: \n\n> ");
 
@@ -51,7 +53,7 @@ int getRetries() {
 	int retries = ERROR;
 	while (retries <= 0) {
 		clrscr();
-		printf("# Which is the maximum number of retries to send a package?\n\n> ");
+		printf("# What is the maximum number of retries to send a package?\n\n> ");
 	
 		scanf("%d", &retries);
 	}
@@ -63,12 +65,36 @@ int getTimeout() {
 	int timeout = ERROR;
 	while (timeout <= 0) {
 		clrscr();
-		printf("# Which is the timeout waiting time in seconds?\n\n> ");
+		printf("# What is the timeout waiting time in seconds?\n\n> ");
 	
 		scanf("%d", &timeout);
 	}
 
 	return timeout;
+}
+
+int getPkgSize() {
+	int pkgSize = ERROR;
+	while (pkgSize <= 0) {
+		clrscr();
+		printf("# What is the maximum package size?\n\n> ");
+	
+		scanf("%d", &pkgSize);
+	}
+
+	return pkgSize;
+}
+
+int getBaudrate() {
+  int choice = ERROR;
+  while (getBaudrateChoice(choice) < 0) {
+	clrscr();
+	printf("# What is the baudrate value?\n\n");
+	printf("[ 0, 75, 110, 134, 150, 200, 300, 600, 1200, 1800, 2400, 4800, 9600, 19200, 38400, 57600, 115200, 230400, 460800]\n\n> ");
+	
+	scanf("%d", &choice);
+  }
+  return getBaudrateChoice(choice);
 }
 
 void printProgressBar(char * fileName, int bytes, int size, int mode) {

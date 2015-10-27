@@ -16,7 +16,7 @@
 
 ApplicationLayer* al;
 
-int initAppLayer(char* port, int status, char * filePath, int timeout, int retries) {
+int initAppLayer(char* port, int status, char * filePath,int timeout, int retries, int pkgSize, int baudrate) {
 	al = (ApplicationLayer*) malloc(sizeof(ApplicationLayer));
 
 	al->fd = openSerialPort(port);
@@ -32,7 +32,7 @@ int initAppLayer(char* port, int status, char * filePath, int timeout, int retri
 	if (al->file == NULL )
 		return ERROR;	
 
-	if (initLinkLayer(port, BAUDRATE, timeout, retries) < 0) {
+	if (initLinkLayer(port, baudrate, pkgSize, timeout, retries) < 0) {
 		printf("ERROR in initAppLayer(): could not initialize link layer\n");
 		return ERROR;
 	}

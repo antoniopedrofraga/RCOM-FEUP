@@ -43,6 +43,7 @@ typedef struct {
 	unsigned int sn;
 	unsigned int timeout;
 	unsigned int numRetries;
+	unsigned int pkgSize;
 	char frame[MAX_FRAME_SIZE];
 	struct termios oldtio, newtio;
 	Statistics statistics;
@@ -59,7 +60,9 @@ typedef struct {
 
 extern LinkLayer* ll;
 
-int initLinkLayer(char* port, int baudRate, unsigned int timeout, unsigned int numTransmissions);
+int initLinkLayer(char* port, int baudRate, unsigned int pkgSize, unsigned int timeout, unsigned int numTransmissions);
+
+int getBaudrateChoice(int choice);
 
 int openSerialPort(char* port);
 

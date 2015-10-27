@@ -31,10 +31,14 @@ int main(int argc, char** argv)
 	int retries = getRetries();
 
 	int timeout = getTimeout();
+	
+	int pkgSize = getPkgSize();
+	
+	int baudrate = getBaudrate();
 
     	char * fileName = getFileName(mode);
 
-    	initAppLayer(port, mode, fileName, timeout, retries);
+    	initAppLayer(port, mode, fileName,timeout, retries, pkgSize, baudrate);
 
    	return 0;
 }
