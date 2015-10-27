@@ -15,7 +15,7 @@
 
 LinkLayer* ll;
 
-int initLinkLayer(char* port, int baudRate,  unsigned int pkgSize,unsigned int timeout, unsigned int numRetries) {
+int initLinkLayer(char* port, int baudRate, int pkgSize,unsigned int timeout, unsigned int numRetries) {
 	ll = (LinkLayer*) malloc(sizeof(LinkLayer));
 
 	strcpy(ll->port, port);

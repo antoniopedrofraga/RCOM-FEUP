@@ -60,7 +60,7 @@ typedef struct {
 
 extern LinkLayer* ll;
 
-int initLinkLayer(char* port, int baudRate, unsigned int pkgSize, unsigned int timeout, unsigned int numTransmissions);
+int initLinkLayer(char* port, int baudRate, int pkgSize, unsigned int timeout, unsigned int numTransmissions);
 
 int getBaudrateChoice(int choice);
 
