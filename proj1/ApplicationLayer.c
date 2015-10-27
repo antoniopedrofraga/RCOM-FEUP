@@ -126,6 +126,8 @@ int receiveData(char * filePath) {
 	int fileSize;
 	if(rcvCtrlPkg(CTRL_PKG_START, &fileSize, &filePath) < 0)
 		return ERROR;
+
+	al->fileSize = fileSize;
 	ll->statistics.msgRcvd++;
 
 	int bytesRead, bytesAcumulator = 0, i = 0;
