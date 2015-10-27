@@ -295,10 +295,8 @@ int llclose() {
 					counter++;
 					setAlarm();
 					sendCommand(al->fd, DISC);
-					if (isCommand(receiveFrame(al->fd), UA)) {
-						printf("Connection successfully terminated!\n");
+					if (isCommand(receiveFrame(al->fd), UA))
 						break;
-					}
 				}
 			}
 			stopAlarm();

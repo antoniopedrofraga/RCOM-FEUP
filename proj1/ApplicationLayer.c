@@ -88,9 +88,9 @@ int sendData(char * filePath) {
 	ll->statistics.msgSent++;
 
 	int bytesRead = 0, i = 0, bytesAcumulator = 0;;
-	char * buffer = malloc(MAX_BUF_SIZE * sizeof(char));
+	char * buffer = malloc(ll->pkgSize * sizeof(char));
 
-	while((bytesRead = fread(buffer, sizeof(char), MAX_BUF_SIZE, al->file)) > 0){
+	while((bytesRead = fread(buffer, sizeof(char), ll->pkgSize, al->file)) > 0){
 		if(sendDataPkg(buffer, bytesRead, i) < 0)
 			return ERROR;
 
@@ -129,7 +129,7 @@ int receiveData(char * filePath) {
 	ll->statistics.msgRcvd++;
 
 	int bytesRead, bytesAcumulator = 0, i = 0;
-	unsigned char * buffer = malloc(MAX_BUF_SIZE * sizeof(char));
+	unsigned char * buffer = malloc(ll->pkgSize * sizeof(char));
 
 	while (bytesAcumulator < fileSize){
 		bytesRead = rcvDataPkg(&buffer, i);
