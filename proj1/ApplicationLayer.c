@@ -85,6 +85,8 @@ FILE * openFile(char * filePath) {
 }
 
 int sendData(char * filePath) {
+	
+	printWaiting(TRANSMITTER);
 
 	if (sendCtrlPkg(CTRL_PKG_START, filePath) < 0)
 		return ERROR;
@@ -124,6 +126,9 @@ int sendData(char * filePath) {
 
 int receiveData(char * filePath) {
 	int fileSize;
+
+	printWaiting(TRANSMITTER);
+
 	if(rcvCtrlPkg(CTRL_PKG_START, &fileSize, &filePath) < 0)
 		return ERROR;
 
@@ -278,8 +283,6 @@ int rcvDataPkg(unsigned char ** buffer,int i) {
 
 	unsigned char * info = NULL;
 	int bytes = 0;
-
-	printf("package nr %d\n", i);
 
 	if (llread(&info) < 0) {
 		printf("ERROR in rcvDataPkg(): llread() function error!\n");

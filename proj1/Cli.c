@@ -80,16 +80,23 @@ void printProgressBar(char * fileName, int bytes, int size, int mode) {
 	
 	printf("[");
 	int i;
-	for(i = 0; i <= 20; i++) {
-		if((bytes / size ) > ( i / 20))
+	for(i = 0; i < 20; i++) {
+		if(((float)bytes / (float)size ) > ( (float)i / 20))
 			printf("=");
 		else
 			printf(" ");
 	}
 	printf("]\t");
-	printf(" %d %% \n\n", (bytes / size * 100));
+	printf(" %d %%/t%d / %d bytes\n\n", (int)((float)bytes / (float)size * 100), bytes, size);
 }
 
+void printWaiting(int mode) {
+	clrscr();
+	if(mode == 0)
+		printf("Waiting for receiver...\n\n");
+	else
+		printf("Waiting for transmitter...\n\n");	
+}
 
 void clrscr() {
 	printf("\033[2J");
