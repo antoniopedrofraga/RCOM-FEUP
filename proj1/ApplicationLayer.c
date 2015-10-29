@@ -52,7 +52,6 @@ int initAppLayer(char* port, int status, char * filePath,int timeout, int retrie
 		receiveData(filePath);
 	
 	llclose();
-
 	closeSerialPort();
 	
 	printStatistics();
