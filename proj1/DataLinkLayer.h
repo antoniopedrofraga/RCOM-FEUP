@@ -70,12 +70,9 @@ int closeSerialPort();
 int setNewTermios();
 
 int llopen();
-
-int llclose();
-
 int llwrite(unsigned char * buf, int bufSize);
-
 int llread(unsigned char ** message);
+int llclose();
 
 unsigned char getBCC2(unsigned char* data, unsigned int size);
 
