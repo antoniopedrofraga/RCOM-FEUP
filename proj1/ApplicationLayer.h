@@ -4,7 +4,6 @@ typedef struct {
 	int fd;
 	int status;
 	FILE * file;
-	int fileSize;
 } ApplicationLayer;
 
 extern ApplicationLayer* al;
