@@ -29,6 +29,10 @@ int initAppLayer(char* port, int status, char * filePath,int timeout, int retrie
 
 	al->file = openFile(filePath);
 	
+	int fileSize;
+	if (stat(filePath, &st) == 0)
+		fileSize = st.st_size;
+	
 	if (al->file == NULL )
 		return ERROR;	
 
@@ -43,7 +47,7 @@ int initAppLayer(char* port, int status, char * filePath,int timeout, int retrie
 		return ERROR;
 
 	if (al->status == TRANSMITTER)
-		sendData(filePath);
+		sendData(filePath, fileSize);
 	else if (al->status == RECEIVER)
 		receiveData(filePath);
 	
@@ -70,8 +74,6 @@ FILE * openFile(char * filePath) {
 	
 	struct stat st; 
 
-	if (stat(filePath, &st) == 0)
-		al->fileSize = st.st_size;
 	else {
 		printf("ERROR in openFile(): error getting file size!\n");
 		return NULL;
@@ -80,9 +82,9 @@ FILE * openFile(char * filePath) {
 	return file;	
 }
 
-int sendData(char * filePath) {
+int sendData(char * filePath, int fileSize) {
 
-	if (sendCtrlPkg(CTRL_PKG_START, filePath) < 0)
+	if (sendCtrlPkg(CTRL_PKG_START, filePath, fileSize) < 0)
 		return ERROR;
 	
 	ll->statistics.msgSent++;
@@ -99,7 +101,7 @@ int sendData(char * filePath) {
 		if (i > 207)
 			i = 0;
 		bytesAcumulator += bytesRead;
-		printProgressBar(filePath, bytesAcumulator, al->fileSize, 0);
+		printProgressBar(filePath, bytesAcumulator, fileSize, 0);
 	}
 
 	if (fclose(al->file) < 0) {
@@ -125,7 +127,6 @@ int receiveData(char * filePath) {
 	if(rcvCtrlPkg(CTRL_PKG_START, &fileSize, &filePath) < 0)
 		return ERROR;
 
-	al->fileSize = fileSize;
 	ll->statistics.msgRcvd++;
 
 	int bytesRead, bytesAcumulator = 0, i = 0;
@@ -161,10 +162,10 @@ int receiveData(char * filePath) {
 }
 
 
-int sendCtrlPkg(int ctrlField, char * filePath) {
+int sendCtrlPkg(int ctrlField, char * filePath, int fileSize) {
 
 	char sizeString[16];
-	sprintf(sizeString, "%d", al->fileSize);
+	sprintf(sizeString, "%d", fileSize);
 
 	int size = 5 + strlen(sizeString) + strlen(filePath);
 
