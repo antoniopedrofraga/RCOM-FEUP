@@ -44,7 +44,6 @@ typedef struct {
 	unsigned int timeout;
 	unsigned int numRetries;
 	unsigned int pkgSize;
-	char frame[MAX_FRAME_SIZE];
 	struct termios oldtio, newtio;
 	Statistics statistics;
 } LinkLayer;
