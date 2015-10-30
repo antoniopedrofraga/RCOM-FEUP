@@ -53,7 +53,7 @@ int getRetries() {
 	int retries = ERROR;
 	while (retries <= 0) {
 		clrscr();
-		printf("# What is the maximum number of retries to send a package?\n\n> ");
+		printf("# What is the maximum number of retries to send a packet?\n\n> ");
 	
 		scanf("%d", &retries);
 	}
@@ -73,16 +73,16 @@ int getTimeout() {
 	return timeout;
 }
 
-int getPkgSize() {
-	int pkgSize = ERROR;
-	while (pkgSize <= 0 || pkgSize > 512) {
+int getPktSize() {
+	int pktSize = ERROR;
+	while (pktSize <= 0 || pktSize > 512) {
 		clrscr();
-		printf("# What is the maximum package size?\n\n> ");
+		printf("# What is the maximum packet size?\n\n> ");
 	
-		scanf("%d", &pkgSize);
+		scanf("%d", &pktSize);
 	}
 
-	return pkgSize;
+	return pktSize;
 }
 
 int getBaudrate() {

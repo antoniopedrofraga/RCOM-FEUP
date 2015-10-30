@@ -15,5 +15,5 @@
 #define BIT(n) (0x01 << n)
 
 typedef enum {
-	CTRL_PKG_DATA = 0, CTRL_PKG_START = 1, CTRL_PKG_END = 2
-} ControlPackageType;
+	CTRL_PKT_DATA = 0, CTRL_PKT_START = 1, CTRL_PKT_END = 2
+} ControlPacketType;

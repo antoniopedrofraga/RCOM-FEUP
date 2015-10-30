@@ -43,7 +43,7 @@ typedef struct {
 	unsigned int sn;
 	unsigned int timeout;
 	unsigned int numRetries;
-	unsigned int pkgSize;
+	unsigned int pktSize;
 	struct termios oldtio, newtio;
 	Statistics statistics;
 } LinkLayer;
@@ -59,7 +59,7 @@ typedef struct {
 
 extern LinkLayer* ll;
 
-int initLinkLayer(char* port, int baudRate, int pkgSize, unsigned int timeout, unsigned int numTransmissions);
+int initLinkLayer(char* port, int baudRate, int pktSize, unsigned int timeout, unsigned int numTransmissions);
 
 int getBaudrateChoice(int choice);
 

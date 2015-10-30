@@ -16,7 +16,7 @@
 
 ApplicationLayer* al;
 
-int initAppLayer(char* port, int status, char * filePath,int timeout, int retries, int pkgSize, int baudrate) {
+int initAppLayer(char* port, int status, char * filePath,int timeout, int retries, int pktSize, int baudrate) {
 	al = (ApplicationLayer*) malloc(sizeof(ApplicationLayer));
 
 	al->fd = openSerialPort(port);
@@ -36,7 +36,7 @@ int initAppLayer(char* port, int status, char * filePath,int timeout, int retrie
 	if (al->file == NULL )
 		return ERROR;	
 
-	if (initLinkLayer(port, baudrate, pkgSize, timeout, retries) < 0) {
+	if (initLinkLayer(port, baudrate, pktSize, timeout, retries) < 0) {
 		printf("ERROR in initAppLayer(): could not initialize link layer\n");
 		return ERROR;
 	}
@@ -83,16 +83,16 @@ FILE * openFile(char * filePath) {
 
 int sendData(char * filePath, int fileSize) {
 
-	if (sendCtrlPkg(CTRL_PKG_START, filePath, fileSize) < 0)
+	if (sendCtrlPkt(CTRL_Pkt_START, filePath, fileSize) < 0)
 		return ERROR;
 	
 	ll->statistics.msgSent++;
 
 	int bytesRead = 0, i = 0, bytesAcumulator = 0;;
-	char * buffer = malloc(ll->pkgSize * sizeof(char));
+	char * buffer = malloc(ll->pktSize * sizeof(char));
 
-	while((bytesRead = fread(buffer, sizeof(char), ll->pkgSize, al->file)) > 0){
-		if(sendDataPkg(buffer, bytesRead, i) < 0)
+	while((bytesRead = fread(buffer, sizeof(char), ll->pktSize, al->file)) > 0){
+		if(sendDataPkt(buffer, bytesRead, i) < 0)
 			return ERROR;
 
 		ll->statistics.msgSent++;
@@ -108,7 +108,7 @@ int sendData(char * filePath, int fileSize) {
 		return ERROR;
 	}
 
-	if (sendCtrlPkg(CTRL_PKG_END, filePath) < 0)
+	if (sendCtrlPkt(CTRL_PKT_END, filePath) < 0)
 		return ERROR;
 
 	ll->statistics.msgSent++;
@@ -123,16 +123,16 @@ int sendData(char * filePath, int fileSize) {
 int receiveData(char * filePath) {
 	int fileSize;
 
-	if(rcvCtrlPkg(CTRL_PKG_START, &fileSize, &filePath) < 0)
+	if(rcvCtrlPkt(CTRL_PKT_START, &fileSize, &filePath) < 0)
 		return ERROR;
 
 	ll->statistics.msgRcvd++;
 
 	int bytesRead, bytesAcumulator = 0, i = 0;
-	unsigned char * buffer = malloc(ll->pkgSize * sizeof(char));
+	unsigned char * buffer = malloc(ll->pktSize * sizeof(char));
 
 	while (bytesAcumulator < fileSize){
-		bytesRead = rcvDataPkg(&buffer, i);
+		bytesRead = rcvDataPkt(&buffer, i);
 		printf("%d\n", bytesRead);
 		if(bytesRead < 0)
 			return ERROR;
@@ -150,7 +150,7 @@ int receiveData(char * filePath) {
 		return ERROR;
 	}
 
-	if (rcvCtrlPkg(CTRL_PKG_END, &fileSize, &filePath) < 0)
+	if (rcvCtrlPkt(CTRL_PKT_END, &fileSize, &filePath) < 0)
 		return ERROR;
 
 	ll->statistics.msgRcvd++;
@@ -161,7 +161,7 @@ int receiveData(char * filePath) {
 }
 
 
-int sendCtrlPkg(int ctrlField, char * filePath, int fileSize) {
+int sendCtrlPkt(int ctrlField, char * filePath, int fileSize) {
 
 	char sizeString[16];
 	sprintf(sizeString, "%d", fileSize);
@@ -192,7 +192,7 @@ int sendCtrlPkg(int ctrlField, char * filePath, int fileSize) {
 	}
 
 	if (llwrite(ctrlPckg, size) < 0) {
-		printf("ERROR in sendCtrlPkg(): llwrite() function error!\n");
+		printf("ERROR in sendCtrlPkt(): llwrite() function error!\n");
 		return ERROR;
 	}
 
@@ -200,22 +200,22 @@ int sendCtrlPkg(int ctrlField, char * filePath, int fileSize) {
 }
 
 
-int rcvCtrlPkg(int controlField, int * fileSize, char ** filePath) {
+int rcvCtrlPkt(int controlField, int * fileSize, char ** filePath) {
 
 	unsigned char * info;
 
 	if (llread(&info) < 0) {
-		printf("ERROR in rcvCtrlPkg(): \n");
+		printf("ERROR in rcvCtrlPkt(): \n");
 		return ERROR;
 	}
 	
 	if ((info[0] - '0') != controlField) {
-		printf("ERROR in rcvCtrlPkg(): unexpected control field!\n");
+		printf("ERROR in rcvCtrlPkt(): unexpected control field!\n");
 		return ERROR;
 	}
 
 	if ((info[1] - '0') != PARAM_SIZE) {
-		printf("ERROR in rcvCtrlPkg(): unexpected size param!\n");
+		printf("ERROR in rcvCtrlPkt(): unexpected size param!\n");
 		return ERROR;
 	}
 
@@ -233,7 +233,7 @@ int rcvCtrlPkg(int controlField, int * fileSize, char ** filePath) {
 	(*fileSize) = atoi(fileSizeStr);
 
 	if((info[acumulator] - '0') != PARAM_NAME) {
-		printf("ERROR in rcvCtrlPkg(): unexpected name param!\n");
+		printf("ERROR in rcvCtrlPkt(): unexpected name param!\n");
 		return ERROR;
 	}
 
@@ -256,12 +256,12 @@ int rcvCtrlPkg(int controlField, int * fileSize, char ** filePath) {
 }
 
 
-int sendDataPkg(char * buffer, int bytesRead, int i) {
+int sendDataPkt(char * buffer, int bytesRead, int i) {
 
 	int size = bytesRead + 4;
 	unsigned char dataPckg[size];
 
-	dataPckg[0] = CTRL_PKG_DATA + '0';
+	dataPckg[0] = CTRL_PKT_DATA + '0';
 	dataPckg[1] = i + '0';
 
 	dataPckg[2] = bytesRead / 256;
@@ -269,20 +269,20 @@ int sendDataPkg(char * buffer, int bytesRead, int i) {
 	memcpy(&dataPckg[4], buffer, bytesRead);
 
 	if (llwrite(dataPckg, size) < 0) {
-		printf("ERROR in sendDataPkg(): llwrite() function error!\n");
+		printf("ERROR in sendDataPkt(): llwrite() function error!\n");
 		return ERROR;
 	}
 
 	return 0;
 }
 
-int rcvDataPkg(unsigned char ** buffer,int i) {
+int rcvDataPkt(unsigned char ** buffer,int i) {
 
 	unsigned char * info = NULL;
 	int bytes = 0;
 
 	if (llread(&info) < 0) {
-		printf("ERROR in rcvDataPkg(): llread() function error!\n");
+		printf("ERROR in rcvDataPkt(): llread() function error!\n");
 		return ERROR;
 	}
 
@@ -292,13 +292,13 @@ int rcvDataPkg(unsigned char ** buffer,int i) {
 	int C = info[0] - '0';
 	int N = info[1] - '0';
 
-	if (C != CTRL_PKG_DATA) {
-		printf("ERROR in rcvDataPkg(): control field it's different from CTRL_PKG_DATA!\n");
+	if (C != CTRL_PKT_DATA) {
+		printf("ERROR in rcvDataPkt(): control field it's different from CTRL_PKT_DATA!\n");
 		return ERROR;
 	}
 	
 	if (N != i) {
-		printf("ERROR in rcvDataPkg(): sequence number it's wrong!\n");
+		printf("ERROR in rcvDataPkt(): sequence number it's wrong!\n");
 		return ERROR;
 	}
 

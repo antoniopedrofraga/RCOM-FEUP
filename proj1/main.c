@@ -32,13 +32,13 @@ int main(int argc, char** argv)
 
 	int timeout = getTimeout();
 	
-	int pkgSize = getPkgSize();
+	int pktSize = getPktSize();
 	
 	int baudrate = getBaudrate();
 
     	char * fileName = getFileName(mode);
 
-    	initAppLayer(port, mode, fileName,timeout, retries, pkgSize, baudrate);
+    	initAppLayer(port, mode, fileName,timeout, retries, pktSize, baudrate);
 
    	return 0;
 }
