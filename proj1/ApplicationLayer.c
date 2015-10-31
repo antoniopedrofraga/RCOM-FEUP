@@ -30,8 +30,16 @@ int initAppLayer(char* port, int status, char * filePath,int timeout, int retrie
 	al->file = openFile(filePath);
 	
 	int fileSize;
-	if (stat(filePath, &st) == 0)
-		fileSize = st.st_size;
+
+	if (al->status == TRANSMITTER) {
+		struct stat st; 
+		if (stat(filePath, &st) == 0)
+			fileSize = st.st_size;
+		else {
+			printf("ERROR getting file size!\n");
+			return ERROR;
+		}
+	}
 	
 	if (al->file == NULL )
 		return ERROR;	
@@ -57,6 +65,7 @@ int initAppLayer(char* port, int status, char * filePath,int timeout, int retrie
 	printStatistics();
 
 	return 0;
+		
 }
 
 FILE * openFile(char * filePath) {
@@ -70,20 +79,13 @@ FILE * openFile(char * filePath) {
 		printf("ERROR in openFile(): error opening file with path <%s>\n", filePath);
 		return NULL;
 	}
-	
-	struct stat st; 
-
-	else {
-		printf("ERROR in openFile(): error getting file size!\n");
-		return NULL;
-	}
 
 	return file;	
 }
 
 int sendData(char * filePath, int fileSize) {
 
-	if (sendCtrlPkt(CTRL_Pkt_START, filePath, fileSize) < 0)
+	if (sendCtrlPkt(CTRL_PKT_START, filePath, fileSize) < 0)
 		return ERROR;
 	
 	ll->statistics.msgSent++;
@@ -108,7 +110,7 @@ int sendData(char * filePath, int fileSize) {
 		return ERROR;
 	}
 
-	if (sendCtrlPkt(CTRL_PKT_END, filePath) < 0)
+	if (sendCtrlPkt(CTRL_PKT_END, filePath, fileSize) < 0)
 		return ERROR;
 
 	ll->statistics.msgSent++;
@@ -142,7 +144,7 @@ int receiveData(char * filePath) {
 		i++;
 		if (i > 207)
 			i = 0;
-		printProgressBar(filePath, bytesAcumulator, al->fileSize, 1);
+		printProgressBar(filePath, bytesAcumulator, fileSize, 1);
 	}
 
 	if (fclose(al->file) < 0) {
