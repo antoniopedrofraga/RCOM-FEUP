@@ -3,9 +3,6 @@ Code developed for "Redes de Computadores" at FEUP
 
 ##Data Connection Protocol
 
-***
-
-
 
 We used a script "port.sh" that can virtual emulate a connection through a serial port, you can execute that script by running:
 
