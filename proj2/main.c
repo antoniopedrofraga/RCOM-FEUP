@@ -35,11 +35,19 @@ int main (int argc, char** argv) {
 		return ERROR;
 
 	debug_msg(debug_mode, "Host is valid, and it returned a valid ip.\n");
-	debug_msg(debug_mode, "Connecting to host.");
+
+	char * host_info = malloc(30 * sizeof(char));
+	strcpy(host_info, "Connecting to ");
+	strcat(host_info, new_url->ip);
+	strcat(host_info, "...");
+
+	debug_msg(debug_mode, host_info);
 
 	sckt * new_sckt = malloc(sizeof(sckt));
 
-	if (connect_host(new_sckt, new_url, debug_mode) == ERROR) 
+	new_sckt->fd = connect_to(new_url->ip, new_url->port, debug_mode);
+
+	if (new_sckt->fd == ERROR) 
 		return ERROR;
 
 	debug_msg(debug_mode, "Connection was successfull.\n");
@@ -51,14 +59,31 @@ int main (int argc, char** argv) {
 
 	debug_msg(debug_mode, "Logged in messages were sent.\n");
 
-	debug_msg(debug_mode, "Sending pasv command.");
+	debug_msg(debug_mode, "Entering passive mode...");
 
 	if (pasv_host(new_sckt, new_url, debug_mode) == ERROR) 
 		return ERROR;
 
-	close(new_sckt->fd);
+	debug_msg(debug_mode, "Completed");
 
-	debug_msg(debug_mode, "Exiting...\n");
+	char * data_host_info = malloc(30 * sizeof(char));
+	strcpy(data_host_info, "Connecting to ");
+	strcat(data_host_info, new_sckt->server_ip);
+	strcat(data_host_info, "...");
+
+	debug_msg(debug_mode, data_host_info);
+
+	debug_msg(debug_mode, "Connected!");
+
+
+
+
+	debug_msg(debug_mode, "Disconnecting...");
+
+	if (disconnect_host(new_sckt, debug_mode) == ERROR) 
+		return ERROR;
+
+	debug_msg(debug_mode, "Diconnected.");
 
 	return OK;
 }
