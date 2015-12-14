@@ -1,4 +1,4 @@
-#include "socket.h"
+#include "connection.h"
 
 int connect_to(char * ip, int port, int debug_mode) {
 

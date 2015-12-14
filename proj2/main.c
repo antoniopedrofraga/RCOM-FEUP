@@ -1,6 +1,6 @@
 #include "utilities.h"
 #include "url.h"
-#include "socket.h"
+#include "connection.h"
 
 
 int main (int argc, char** argv) {
@@ -20,7 +20,6 @@ int main (int argc, char** argv) {
 	}
 
 	int debug_mode = strcmp(argv[2], "ON") == 0 ? 1 : 0;
-
 
 	debug_msg(debug_mode, "Initializing a url struct.");
 
@@ -64,7 +63,7 @@ int main (int argc, char** argv) {
 	if (pasv_host(new_sckt, new_url, debug_mode) == ERROR) 
 		return ERROR;
 
-	debug_msg(debug_mode, "Completed");
+	debug_msg(debug_mode, "Completed!\n");
 
 	char * data_host_info = malloc(30 * sizeof(char));
 	strcpy(data_host_info, "Connecting to ");
@@ -73,7 +72,7 @@ int main (int argc, char** argv) {
 
 	debug_msg(debug_mode, data_host_info);
 
-	debug_msg(debug_mode, "Connected!");
+	debug_msg(debug_mode, "Connected!\n");
 
 
 
@@ -83,7 +82,7 @@ int main (int argc, char** argv) {
 	if (disconnect_host(new_sckt, debug_mode) == ERROR) 
 		return ERROR;
 
-	debug_msg(debug_mode, "Diconnected.");
+	debug_msg(debug_mode, "Diconnected.\n");
 
 	return OK;
 }
