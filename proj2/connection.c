@@ -272,8 +272,6 @@ int read_from_host(int connection_fd, char* msg, int debug_mode, char * code) {
 		return ERROR;
 	} 
 
-	free(msg);
-
 	return OK;
 }
 
@@ -345,7 +343,7 @@ int download_from_host(connection * connectionB, char* path, int debug_mode) {
 
 	debug_sub_msg(1, "Completed!");
 
-	fclose(file);
+	//fclose(file);
 	close(connectionB->fd);
 
 	return 0;

@@ -8,11 +8,11 @@ int init_url(url * url, char * url_str, int debug_mode) {
 
 	char str_beg[6];
 	strncpy(str_beg, url_str, 6);
-
-	if (strcmp(str_beg, "ftp://") != 0) {
+	
+	/*if (strcmp(str_beg, "ftp://") != 0) {
 		printf("\nError! Please start your url by 'ftp://'...\n");
 		return ERROR;
-	}
+	}*/
 
 	char ** sub_str = malloc(5 * sizeof(char*));
 
@@ -67,7 +67,7 @@ int init_url(url * url, char * url_str, int debug_mode) {
 	url->path = malloc(strlen(sub_str[3]));
 	size = strlen(sub_str[3]);
 	memcpy(url->path, sub_str[3], size);
-	url->path[size] = '\0';
+	url->path[size - 1] = '\0';
 
 	if (!strlen(url->path)) {
 		printf("\nError! Please declare a path...\n");
