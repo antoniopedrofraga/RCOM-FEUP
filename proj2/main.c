@@ -105,7 +105,7 @@ int main (int argc, char** argv) {
 
 	debug_msg(debug_mode, "Disconnecting...");
 
-	if (disconnect_host(connectionA, debug_mode) == ERROR) 
+	if (disconnect_host(connectionA, new_url, debug_mode) == ERROR) 
 		return ERROR;
 
 	debug_msg(debug_mode, "Diconnected.\n");

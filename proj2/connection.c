@@ -64,6 +64,8 @@ int connect_to(char * ip, int port, int debug_mode) {
 		}
 
 		debug_sub_msg(debug_mode, "Message received!");
+		
+		free(msg);
 
 	}
 
@@ -91,6 +93,7 @@ int log_in_host(connection * connection, url * url, int debug_mode) {
 		return ERROR;
 	}
 
+
 	debug_sub_msg(debug_mode, "Message received!");
 
 
@@ -112,6 +115,8 @@ int log_in_host(connection * connection, url * url, int debug_mode) {
 		printf("\nLog in failed!\n\n");
 		return ERROR;
 	}
+
+	free(password);
 
 	debug_sub_msg(debug_mode, "Message received!");
 
@@ -195,6 +200,9 @@ int def_path(connection * connectionA, char * path, int debug_mode) {
 		return ERROR;
 	}
 
+	free(retr);
+	free(path_info);
+
 	debug_sub_msg(debug_mode, "Message received!");
 		
 	return OK;
@@ -202,7 +210,7 @@ int def_path(connection * connectionA, char * path, int debug_mode) {
 
 
 
-int disconnect_host(connection * connectionA, int debug_mode) {
+int disconnect_host(connection * connectionA, url * url, int debug_mode) {
 	
 	char * quitA = malloc(6 * sizeof(char));
 	
@@ -217,8 +225,12 @@ int disconnect_host(connection * connectionA, int debug_mode) {
 
 	debug_sub_msg(debug_mode, "Closing socket...");
 
-	if (connectionA->fd)
+	if (connectionA->fd) {
 		close(connectionA->fd);
+		free(connectionA);
+	}
+	
+	free(url);
 
 	return OK;
 }
@@ -270,7 +282,7 @@ int read_from_host(int connection_fd, char* msg, int debug_mode, char * code) {
 			printf(error_msg, "\n\nError! You received a wrong code message\n");
 
 		return ERROR;
-	} 
+	}
 
 	return OK;
 }
@@ -306,6 +318,7 @@ int get_pasv_from_host(int connection_fd, char* ip_str, int * port,int debug_mod
 		return ERROR;
 
 	*port = 256 * port_arr[0] + port_arr[1];
+
 
 	return OK;
 }
@@ -343,8 +356,13 @@ int download_from_host(connection * connectionB, char* path, int debug_mode) {
 
 	debug_sub_msg(1, "Completed!");
 
-	//fclose(file);
-	close(connectionB->fd);
+	if(connectionB->fd) {
+		close(connectionB->fd);
+		free(connectionB);
+	}
+
+	if(file)
+	 	fclose(file);
 
 	return 0;
 }

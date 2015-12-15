@@ -26,7 +26,7 @@ int def_path(connection * connectionA,char * path, int debug_mode);
 
 int download_from_host(connection * connectionB, char* path, int debug_mode);
 
-int disconnect_host(connection * connectionA, int debug_mode);
+int disconnect_host(connection * connectionA, url * url, int debug_mode);
 
 int send_to_host(int connection_fd, const char* msg);
 
