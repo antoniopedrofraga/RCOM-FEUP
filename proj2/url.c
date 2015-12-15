@@ -25,6 +25,12 @@ int init_url(url * url, char * url_str, int debug_mode) {
 	url->user = malloc(strlen(sub_str[0]));
 	memcpy(url->user, sub_str[0], strlen(sub_str[0]));
 	strtok(url->user, ":");
+
+	if (strlen(url->user) == strlen(sub_str[0])) {
+		printf("\nError!!! Please declare an user...\n");
+		return ERROR;
+	}
+
 	size = strlen(sub_str[0]) - strlen(url->user) - 1;
 	sub_str[1] = malloc(size);
 	memcpy(sub_str[1], sub_str[0] + strlen(url->user) + 1, size);
@@ -33,6 +39,12 @@ int init_url(url * url, char * url_str, int debug_mode) {
 	url->password = malloc(strlen(sub_str[1]));
 	memcpy(url->password, sub_str[1], strlen(sub_str[1]));
 	strtok(url->password, "@");
+
+	if (strlen(url->password) == strlen(sub_str[1])) {
+		printf("\nError!!! Please declare a password...\n");
+		return ERROR;
+	}
+
 	size = strlen(sub_str[1]) - strlen(url->password) - 1;
 	sub_str[2] = malloc(size);
 	memcpy(sub_str[2], sub_str[1] + strlen(url->password) + 1, size);
@@ -41,52 +53,30 @@ int init_url(url * url, char * url_str, int debug_mode) {
 	url->host = malloc(strlen(sub_str[2]));
 	memcpy(url->host, sub_str[2], strlen(sub_str[2]));
 	strtok(url->host, "/");
+
+	if (strlen(url->host) == strlen(sub_str[2])) {
+		printf("\nError! Please declare a host...\n");
+		return ERROR;
+	}
+
 	size = strlen(sub_str[2]) - strlen(url->host) - 1;
 	sub_str[3] = malloc(size);
 	memcpy(sub_str[3], sub_str[2] + strlen(url->host) + 1, size);
 	sub_str[3][size] = '\0';
 
-	if (!strlen(sub_str[3])) {
-		printf("\nError! Please declare a host...\n");
-		return ERROR;
-	}
-
 	url->path = malloc(strlen(sub_str[3]));
-	size = strlen(sub_str[3]) - 1;
+	size = strlen(sub_str[3]);
 	memcpy(url->path, sub_str[3], size);
-
+	url->path[size] = '\0';
 
 	if (!strlen(url->path)) {
 		printf("\nError! Please declare a path...\n");
 		return ERROR;
 	}
 
-	url->port = 21;
-
 	debug_sub_msg(debug_mode, "Completed!");
 	
 	return OK;
 }
 
-
-
-int get_ip(url* url, int debug_mode) {
-	struct hostent* h;
-
-	debug_sub_msg(debug_mode, "Getting host ip by name...");
-
-	if ((h = gethostbyname(url->host)) == NULL) {
-		herror("Error, could not execute gethostbyname()");
-		return ERROR;
-	}
-
-	debug_sub_msg(debug_mode, "Completed!");
-
-	char* ip = inet_ntoa(*((struct in_addr *) h->h_addr));
-
-	url->ip = malloc(strlen(ip));
-	strcpy(url->ip, ip);
-
-	return OK;
-}
 

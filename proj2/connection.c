@@ -1,5 +1,29 @@
 #include "connection.h"
 
+
+int get_ip(connection * connection, url* url, int debug_mode) {
+	struct hostent* h;
+
+	debug_sub_msg(debug_mode, "Getting host ip by name...");
+
+	if ((h = gethostbyname(url->host)) == NULL) {
+		herror("Error, could not execute gethostbyname()");
+		return ERROR;
+	}
+
+	debug_sub_msg(debug_mode, "Completed!");
+
+	char* ip = inet_ntoa(*((struct in_addr *) h->h_addr));
+
+	connection->ip = malloc(strlen(ip));
+	strcpy(connection->ip, ip);
+
+	connection->port = 21;
+
+	return OK;
+}
+
+
 int connect_to(char * ip, int port, int debug_mode) {
 
 	struct sockaddr_in server_addr;
@@ -14,7 +38,7 @@ int connect_to(char * ip, int port, int debug_mode) {
 
 	if ((fd = socket(AF_INET,SOCK_STREAM,0)) < 0) {
     		perror("\t->Error, could not execute socket()");
-        	return ERROR;
+        	exit(ERROR);
     }
 
     debug_sub_msg(debug_mode, "Socket created.");
@@ -23,31 +47,37 @@ int connect_to(char * ip, int port, int debug_mode) {
 
     if (connect(fd, (struct sockaddr *)&(server_addr), sizeof(server_addr)) < 0){
         perror("\t->Error, could not execute connect()");
-		return ERROR;
+		exit(ERROR);
 	}
 
 	debug_sub_msg(debug_mode, "Connected!");
 
-	char * msg = malloc(5 * sizeof(char));
+	if (port == 21) {
 
-	debug_sub_msg(debug_mode, "Receiving response message...");
+		char * msg = malloc(5 * sizeof(char));
 
-	read_from_host(fd, msg, debug_mode);
+		debug_sub_msg(debug_mode, "Receiving response message...");
 
-	debug_sub_msg(debug_mode, "Message received!");
+		if (read_from_host(fd, msg, debug_mode, "220") == ERROR) {
+			printf("\nNot a valid connect message!\n\n");
+			return ERROR;
+		}
 
+		debug_sub_msg(debug_mode, "Message received!");
+
+	}
 
 	return fd;
 }
 
-int log_in_host(sckt * sckt, url * url, int debug_mode) {
+int log_in_host(connection * connection, url * url, int debug_mode) {
 
 	char * user = malloc(sizeof(url->user) + 5 * sizeof(char));
 	sprintf(user, "user %s\r\n", url->user);
 
 	debug_sub_msg(debug_mode, "Sending user to host...");
 
-	if (send_to_host(sckt->fd, user) == ERROR) {
+	if (send_to_host(connection->fd, user) == ERROR) {
 		printf("\t->Error sending a message to host.");
 		return ERROR;
 	} 
@@ -56,7 +86,10 @@ int log_in_host(sckt * sckt, url * url, int debug_mode) {
 
 	debug_sub_msg(debug_mode, "Receiving message from host...");
 
-	read_from_host(sckt->fd, user, debug_mode);
+	if (read_from_host(connection->fd, user, debug_mode, "331") == ERROR) {
+		printf("\nNot a valid user message!\n\n");
+		return ERROR;
+	}
 
 	debug_sub_msg(debug_mode, "Message received!");
 
@@ -66,7 +99,7 @@ int log_in_host(sckt * sckt, url * url, int debug_mode) {
 
 	debug_sub_msg(debug_mode, "Sending password to host...");
 
-	if (send_to_host(sckt->fd, password) == ERROR) {
+	if (send_to_host(connection->fd, password) == ERROR) {
 		printf("\t->Error sending a message to host.");
 		return ERROR;
 	} 
@@ -75,7 +108,10 @@ int log_in_host(sckt * sckt, url * url, int debug_mode) {
 
 	debug_sub_msg(debug_mode, "Receiving message from host...");
 
-	read_from_host(sckt->fd, password, debug_mode);
+	if (read_from_host(connection->fd, password, debug_mode, "230") == ERROR) {
+		printf("\nLog in failed!\n\n");
+		return ERROR;
+	}
 
 	debug_sub_msg(debug_mode, "Message received!");
 
@@ -84,14 +120,14 @@ int log_in_host(sckt * sckt, url * url, int debug_mode) {
 }
 
 
-int pasv_host(sckt * sckt, url * url, int debug_mode) {
+int pasv_host(connection * connectionA, url * url, int debug_mode, connection * connectionB) {
 
 	char * pasv = malloc(7 * sizeof(char));
 	sprintf(pasv, "pasv \r\n");
 
 	debug_sub_msg(debug_mode, "Sending password to host...");
 
-	if (send_to_host(sckt->fd, pasv) == ERROR) {
+	if (send_to_host(connectionA->fd, pasv) == ERROR) {
 		printf("\t->Error sending a message to host.");
 		return ERROR;
 	} 
@@ -104,7 +140,7 @@ int pasv_host(sckt * sckt, url * url, int debug_mode) {
 
 	int port;
 
-	if( get_pasv_from_host(sckt->fd, ip, &port, debug_mode) < 0 ) {
+	if( get_pasv_from_host(connectionA->fd, ip, &port, debug_mode) < 0 ) {
 		printf("\t->Error interpreting passive message.\n");
 		return ERROR;
 	}
@@ -123,8 +159,8 @@ int pasv_host(sckt * sckt, url * url, int debug_mode) {
 		return ERROR;
 	}
 
-	sckt->server_ip = ip;
-	sckt->server_port = port;
+	connectionB->ip = ip;
+	connectionB->port = port;
 
 	debug_sub_msg(debug_mode, port_info);
 
@@ -133,36 +169,67 @@ int pasv_host(sckt * sckt, url * url, int debug_mode) {
 	return OK;
 }
 
+int def_path(connection * connectionA, char * path, int debug_mode) {	
+	
+	char * retr = malloc(1024 * sizeof(char));
+	sprintf(retr, "retr %s\r\n", path);
+
+	char * path_info = malloc(1024 * sizeof(char));
+	sprintf(path_info, "File: %s", path);
+
+	debug_sub_msg(debug_mode, path_info);
+
+	debug_sub_msg(debug_mode, "Sending 'retr' command to host...");
+
+	if (send_to_host(connectionA->fd, retr) == ERROR) {
+		printf("\t->Error sending a message to host.");
+		return ERROR;
+	} 
+
+	debug_sub_msg(debug_mode, "Command sent!");
+
+	debug_sub_msg(debug_mode, "Receiving message from host...");
+
+	if (read_from_host(connectionA->fd, retr, debug_mode, "150") == ERROR) {
+		printf("\nPath is not valid!\n\n");
+		return ERROR;
+	}
+
+	debug_sub_msg(debug_mode, "Message received!");
+		
+	return OK;
+}
 
 
-int disconnect_host(sckt * sckt, int debug_mode) {
+
+int disconnect_host(connection * connectionA, int debug_mode) {
 	
-	char * quit = malloc(6 * sizeof(char));
+	char * quitA = malloc(6 * sizeof(char));
 	
-	sprintf(quit, "quit\r\n");
+	sprintf(quitA, "quit\r\n");
 
 	debug_sub_msg(debug_mode, "Sending 'quit' command to host...");
 	
-	if (send_to_host(sckt->fd, quit) == ERROR) {
-		printf("\t->Error sending a message to host.");
+	if (send_to_host(connectionA->fd, quitA) == ERROR) {
+		printf("\t->Error sending a message to host A.");
 		return ERROR;
 	}
 
 	debug_sub_msg(debug_mode, "Closing socket...");
 
-	if (sckt->fd)
-		close(sckt->fd);
+	if (connectionA->fd)
+		close(connectionA->fd);
 
 	return OK;
 }
 
 
 
-int send_to_host(int sckt_fd, const char* msg) {
+int send_to_host(int connection_fd, const char* msg) {
 	
 	int written_bytes = 0;
 
-	written_bytes = write(sckt_fd, msg, strlen(msg));
+	written_bytes = write(connection_fd, msg, strlen(msg));
 
 	int return_value = (written_bytes == strlen(msg)) ? OK : ERROR; 
 
@@ -171,9 +238,9 @@ int send_to_host(int sckt_fd, const char* msg) {
 }
 
 
-int read_from_host(int sckt_fd, char* msg, int debug_mode) {
+int read_from_host(int connection_fd, char* msg, int debug_mode, char * code) {
 
-	FILE* fp = fdopen(sckt_fd, "r");
+	FILE* fp = fdopen(connection_fd, "r");
 	int size = 4;
 	
 	if(debug_mode)
@@ -191,6 +258,20 @@ int read_from_host(int sckt_fd, char* msg, int debug_mode) {
 	if(debug_mode)
 		printf("\n");
 
+	if (strcmp(msg, code) != 0) {
+		char * error_msg = malloc(1024 * sizeof(char));
+		strcpy(error_msg, "\n\nError!! It was suposed to receive a message with the '");
+		strcat(error_msg, code);
+		strcat(error_msg, "' code, and a it was received a message with the '");
+		strcat(error_msg, msg);
+		strcat(error_msg, "' code...\n\n");
+		
+		if(debug_mode)
+			printf(error_msg, "\n\nError! You received a wrong code message\n");
+
+		return ERROR;
+	} 
+
 	free(msg);
 
 	return OK;
@@ -198,9 +279,9 @@ int read_from_host(int sckt_fd, char* msg, int debug_mode) {
 
 
 
-int get_pasv_from_host(int sckt_fd, char* ip_str, int * port,int debug_mode) {
+int get_pasv_from_host(int connection_fd, char* ip_str, int * port,int debug_mode) {
 
-	FILE* fp = fdopen(sckt_fd, "r");
+	FILE* fp = fdopen(connection_fd, "r");
 	int size = 1024;
 	char * msg = malloc(size * sizeof(char));
 	
@@ -228,8 +309,46 @@ int get_pasv_from_host(int sckt_fd, char* ip_str, int * port,int debug_mode) {
 
 	*port = 256 * port_arr[0] + port_arr[1];
 
-	free(msg);
-
 	return OK;
 }
+
+
+int download_from_host(connection * connectionB, char* path, int debug_mode) {
+	FILE* file;
+	int bytes;
+
+	char * filename = basename(path);
+
+	debug_sub_msg(1, "Creating file with defined path...");
+
+	if (!(file = fopen(filename, "w"))) {
+		printf("ERROR: Cannot open file.\n");
+		return ERROR;
+	}
+
+	debug_sub_msg(1, "Created!");
+
+	debug_sub_msg(1, "Downloading...");
+
+	char buf[1024];
+	while ((bytes = read(connectionB->fd, buf, sizeof(buf)))) {
+		if (bytes < 0) {
+			printf("ERROR: Nothing was received from data socket fd.\n");
+			return ERROR;
+		}
+
+		if ((bytes = fwrite(buf, bytes, 1, file)) < 0) {
+			printf("ERROR: Cannot write data in file.\n");
+			return ERROR;
+		}
+	}
+
+	debug_sub_msg(1, "Completed!");
+
+	fclose(file);
+	close(connectionB->fd);
+
+	return 0;
+}
+
 

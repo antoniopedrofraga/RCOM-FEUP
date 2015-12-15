@@ -30,56 +30,82 @@ int main (int argc, char** argv) {
 	debug_msg(debug_mode, "Url struct initialized.\n");
 	debug_msg(debug_mode, "Getting ip by host name.");
 
-	if (get_ip(new_url, debug_mode) == ERROR)
+	connection * connectionA = malloc(sizeof(connection));
+
+	if (get_ip(connectionA, new_url, debug_mode) == ERROR)
 		return ERROR;
 
 	debug_msg(debug_mode, "Host is valid, and it returned a valid ip.\n");
 
 	char * host_info = malloc(30 * sizeof(char));
-	strcpy(host_info, "Connecting to ");
-	strcat(host_info, new_url->ip);
+	strcpy(host_info, "Connecting to A '");
+	strcat(host_info, connectionA->ip);
+	strcat(host_info, "' through port ");
+	char portA_str[15];
+	sprintf(portA_str, "%d", connectionA->port);
+	strcat(host_info, portA_str);
 	strcat(host_info, "...");
 
 	debug_msg(debug_mode, host_info);
 
-	sckt * new_sckt = malloc(sizeof(sckt));
+	connectionA->fd = connect_to(connectionA->ip, connectionA->port, debug_mode);
 
-	new_sckt->fd = connect_to(new_url->ip, new_url->port, debug_mode);
-
-	if (new_sckt->fd == ERROR) 
+	if (connectionA->fd == ERROR) 
 		return ERROR;
 
 	debug_msg(debug_mode, "Connection was successfull.\n");
 
 	debug_msg(debug_mode, "Logging in.");
 
-	if (log_in_host(new_sckt, new_url, debug_mode) == ERROR) 
+	if (log_in_host(connectionA, new_url, debug_mode) == ERROR) 
 		return ERROR;
 
 	debug_msg(debug_mode, "Logged in messages were sent.\n");
 
 	debug_msg(debug_mode, "Entering passive mode...");
 
-	if (pasv_host(new_sckt, new_url, debug_mode) == ERROR) 
+	connection * connectionB = malloc(sizeof(connection));
+
+	if (pasv_host(connectionA, new_url, debug_mode, connectionB) == ERROR) 
 		return ERROR;
 
 	debug_msg(debug_mode, "Completed!\n");
 
 	char * data_host_info = malloc(30 * sizeof(char));
-	strcpy(data_host_info, "Connecting to ");
-	strcat(data_host_info, new_sckt->server_ip);
+	strcpy(data_host_info, "Connecting to B '");
+	strcat(data_host_info, connectionA->ip);
+	strcat(data_host_info, "' through port ");
+	char portB_str[15];
+	sprintf(portB_str, "%d", connectionB->port);
+	strcat(data_host_info, portB_str);
 	strcat(data_host_info, "...");
 
 	debug_msg(debug_mode, data_host_info);
 
+	connectionB->fd = connect_to(connectionB->ip, connectionB->port, debug_mode);
+
+	if (connectionB->fd == ERROR) 
+		return ERROR;
+
 	debug_msg(debug_mode, "Connected!\n");
 
+	debug_msg(debug_mode, "Sending path...");
 
+	if (def_path(connectionA, new_url->path, debug_mode) == ERROR)
+		return ERROR;
 
+	debug_msg(debug_mode, "Path was sent!\n");
+
+	debug_msg(1, "Downloading file...");
+
+	if (download_from_host(connectionB, new_url->path, debug_mode) == ERROR)
+		return ERROR;
+
+	debug_msg(1, "Download completed...\n");
 
 	debug_msg(debug_mode, "Disconnecting...");
 
-	if (disconnect_host(new_sckt, debug_mode) == ERROR) 
+	if (disconnect_host(connectionA, debug_mode) == ERROR) 
 		return ERROR;
 
 	debug_msg(debug_mode, "Diconnected.\n");

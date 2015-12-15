@@ -13,6 +13,8 @@
 #include <unistd.h>
 #include <signal.h>
 
+#include <libgen.h>
+
 
 #define ERROR -1
 #define OK 0
