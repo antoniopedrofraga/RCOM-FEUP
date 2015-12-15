@@ -68,7 +68,7 @@ int init_url(url * url, char * url_str, int debug_mode) {
 	url->path = malloc(strlen(sub_str[3]));
 	size = strlen(sub_str[3]);
 	memcpy(url->path, sub_str[3], size);
-	url->path[size - 1] = '\0';
+	url->path[size] = '\0';
 
 	if (!strlen(url->path)) {
 		printf("\nError! Please declare a path...\n");
