@@ -130,14 +130,14 @@ int pasv_host(connection * connectionA, url * url, int debug_mode, connection * 
 	char * pasv = malloc(7 * sizeof(char));
 	sprintf(pasv, "pasv \r\n");
 
-	debug_sub_msg(debug_mode, "Sending password to host...");
+	debug_sub_msg(debug_mode, "Sending passive message to host...");
 
 	if (send_to_host(connectionA->fd, pasv) == ERROR) {
 		printf("\t->Error sending a message to host.");
 		return ERROR;
 	} 
 
-	debug_sub_msg(debug_mode, "Password sent!");
+	debug_sub_msg(debug_mode, "Passive message sent!");
 
 	debug_sub_msg(debug_mode, "Interpreting passive message from host...");
 
@@ -341,7 +341,7 @@ int download_from_host(connection * connectionB, char* path, int debug_mode) {
 
 	debug_sub_msg(1, "Downloading...");
 
-	char buf[1024];
+	char*buf = malloc(1024);
 	while ((bytes = read(connectionB->fd, buf, sizeof(buf)))) {
 		if (bytes < 0) {
 			printf("ERROR: Nothing was received from data socket fd.\n");
