@@ -39,8 +39,13 @@ Já que o servidor entrou no modo passivo e existem todos os dados de ligação 
 
 Os dados para que a transferência ocorra estão enviados, então a ligação B começa a transferir o ficheiro (download_from_host), abrindo um ficheiro para escrita e escrevendo os dados recebidos a cada 1024 bytes, fechando-o quando este estiver terminado. A ligação B é fechada e passa-se à desconexão da ligação A, enviando-se uma mensagem de terminação ao servidor e libertando a memória alocada anteriormente.
 
+** incluir final.png **
+
 
 - Uma transferência bem sucedida
 
-Para uma melhor análise de resultados o grupo decidiu implementar um modo de debug que pode ou não ser ativado. Este modo debug imprime várias informações sobre toda a execução do programa desenvolvido. Uma transferência só é bem sucedida se todas as respostas por parte do servidor contiverem o código de resposta positivo em relação à mensagem enviada pelo programa.
+Para uma melhor análise de resultados o grupo decidiu implementar um modo de debug que pode ou não ser ativado. Este modo debug imprime várias informações sobre toda a execução do programa desenvolvido. Uma transferência só é bem sucedida se todas as respostas por parte do servidor contiverem o código de resposta positivo em relação à mensagem enviada pelo programa. Se por qualquer motivo o código de resposta não for aquele que é suposto ser então o programa termina a sua execução e imprime a respetiva mensagem de erro, uma possibilidade seria a falha de autenticação. Esta verificação é feita pelo método read_from_host que recebe como argumento o código que é suposto receber em cada chamada. Na imagem seguinte está o resultado de uma execução com sucesso com o modo debug ativado.
+
+** imagem com o terminal de transferencia sucedida **
+  
 
