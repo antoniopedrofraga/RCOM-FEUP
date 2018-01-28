@@ -1,8 +1,8 @@
 # Computer Networks
-Code developed for "Redes de Computadores" (Computer Networks) at FEUP. Consult the projects for furder info:
+Code developed for "Redes de Computadores" (Computer Networks) at FEUP. Consult the projects for further info:
 
-* [Data Connection Protocol](./project 1)
-* [Network configuration and development of a download app](./project 2)
+* [Data Connection Protocol](project%201/)
+* [Network configuration and development of a download app](project%202/)
 
 ***
 
